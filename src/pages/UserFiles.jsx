@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import FileCard from '../components/FileCard'
@@ -9,14 +9,15 @@ export default function UserFiles(){
   const { id } = useParams()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const { socket } = useSocket()
+  const { socket, isConnected } = useSocket()
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
   const [msg, setMsg] = useState('')
   const [downloading, setDownloading] = useState(null)
   const [otherUser, setOtherUser] = useState(null)
 
-  const load = async () => {
+  // Memoize load function so it can be safely used in dependency arrays
+  const load = useCallback(async () => {
     try{
       const [filesRes, usersRes] = await Promise.all([
         api.get(`/files/with/${id}`),
@@ -32,34 +33,40 @@ export default function UserFiles(){
         navigate('/login')
       }
     }
-  }
+  }, [id, logout, navigate])
 
+  // Load files when component mounts or id changes
   useEffect(()=>{
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[id])
+  },[id, load])
 
   // REAL-TIME NOTIFICATIONS: Listen for file received events via socket
   useEffect(() => {
-    if (!socket) return
+    if (!socket || !isConnected) {
+      console.log('⏳ Waiting for socket connection...')
+      return
+    }
+
+    console.log('🔌 Socket connected - listening for file notifications')
 
     const handleFileReceived = (fileData) => {
       console.log('🔔 Real-time notification: File received!', fileData)
-      // Check if this file involves the current conversation
-      if (fileData.sender?._id === id || fileData.receiver === id) {
-        // Refresh the file list to show new file
-        load()
-        setMsg('✨ New file received!')
-        setTimeout(() => setMsg(''), 3000)
-      }
+      console.log('File sender ID:', fileData.sender?._id, 'Current ID:', id)
+      
+      // Refresh the file list immediately when file is received
+      load()
+      setMsg('✨ New file received!')
+      setTimeout(() => setMsg(''), 3000)
     }
 
     socket.on('fileReceived', handleFileReceived)
+    console.log('📡 Registered fileReceived listener')
 
     return () => {
+      console.log('🔌 Cleaning up fileReceived listener')
       socket.off('fileReceived', handleFileReceived)
     }
-  }, [socket, id])
+  }, [socket, isConnected, load])
 
   const submit = async (e) => {
     e.preventDefault()
