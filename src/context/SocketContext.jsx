@@ -21,11 +21,12 @@ export const SocketProvider = ({ children }) => {
     
     if (!token) {
       console.warn('No token found, skipping socket connection');
+      setSocket(null);
       return;
     }
 
     // Determine the API URL
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     // Remove /api suffix if present to get the base URL
     const baseUrl = apiUrl.replace(/\/api$/, '');
 
@@ -35,6 +36,7 @@ export const SocketProvider = ({ children }) => {
       auth: {
         token: token,
       },
+      transports: ['polling', 'websocket'], // polling first for ngrok compatibility
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
@@ -76,7 +78,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       newSocket.close();
     };
-  }, []);
+  }, []); // Remove dependency on token to allow reconnection
 
   return (
     <SocketContext.Provider value={{ socket, isConnected, onlineUsers }}>

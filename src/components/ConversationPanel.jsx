@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import api from '../api/axios'
 import FileCard from './FileCard'
 
-export default function ConversationPanel({ userId, userObj, showNotification, refreshTrigger }){
+export default function ConversationPanel({ userId, userObj, showNotification }){
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -29,7 +29,7 @@ export default function ConversationPanel({ userId, userObj, showNotification, r
     load()
     return ()=>{ mounted.current = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[userId, refreshTrigger])
+  },[userId])
 
   const submit = async (e) => {
     e && e.preventDefault && e.preventDefault()
