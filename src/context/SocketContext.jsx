@@ -36,7 +36,7 @@ export const SocketProvider = ({ children }) => {
       auth: {
         token: token,
       },
-      transports: ['polling', 'websocket'], // polling first for ngrok compatibility
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
@@ -45,12 +45,12 @@ export const SocketProvider = ({ children }) => {
 
     // Connection events
     newSocket.on('connect', () => {
-      console.log('Socket connected:', newSocket.id);
+      console.log('✅ Socket connected:', newSocket.id);
       setIsConnected(true);
     });
 
     newSocket.on('disconnect', () => {
-      console.log('Socket disconnected');
+      console.log('❌ Socket disconnected');
       setIsConnected(false);
     });
 
@@ -78,7 +78,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       newSocket.close();
     };
-  }, []); // Remove dependency on token to allow reconnection
+  }, []);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected, onlineUsers }}>

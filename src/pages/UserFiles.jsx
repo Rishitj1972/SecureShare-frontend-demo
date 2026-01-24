@@ -3,11 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import FileCard from '../components/FileCard'
 import { useAuth } from '../context/AuthContext'
+import { useSocket } from '../context/SocketContext'
 
 export default function UserFiles(){
   const { id } = useParams()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { socket } = useSocket()
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
   const [msg, setMsg] = useState('')
@@ -36,6 +38,28 @@ export default function UserFiles(){
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[id])
+
+  // REAL-TIME NOTIFICATIONS: Listen for file received events via socket
+  useEffect(() => {
+    if (!socket) return
+
+    const handleFileReceived = (fileData) => {
+      console.log('🔔 Real-time notification: File received!', fileData)
+      // Check if this file involves the current conversation
+      if (fileData.sender?._id === id || fileData.receiver === id) {
+        // Refresh the file list to show new file
+        load()
+        setMsg('✨ New file received!')
+        setTimeout(() => setMsg(''), 3000)
+      }
+    }
+
+    socket.on('fileReceived', handleFileReceived)
+
+    return () => {
+      socket.off('fileReceived', handleFileReceived)
+    }
+  }, [socket, id])
 
   const submit = async (e) => {
     e.preventDefault()
