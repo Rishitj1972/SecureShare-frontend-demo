@@ -3,6 +3,7 @@ import UsersList from '../components/UsersList'
 import ConversationPanel from '../components/ConversationPanel'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
+import { useSocket } from '../context/SocketContext'
 
 function Notification({ note }){
   if(!note) return null
@@ -15,10 +16,12 @@ function Notification({ note }){
 
 export default function Chat(){
   const { user } = useAuth()
+  const { socket } = useSocket()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState(null)
   const [note, setNote] = useState(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(()=>{
     const load = async () =>{
@@ -45,6 +48,32 @@ export default function Chat(){
     load()
   },[user])
 
+  // Listen for real-time file events
+  useEffect(() => {
+    if (!socket) return
+
+    const handleFileReceived = (data) => {
+      console.log('File received event:', data)
+      // Trigger refresh in ConversationPanel
+      setRefreshTrigger(prev => prev + 1)
+      showNotification(`New file received: ${data.originalFileName}`, 'success')
+    }
+
+    const handleFileDeleted = (data) => {
+      console.log('File deleted event:', data)
+      setRefreshTrigger(prev => prev + 1)
+      showNotification('A file was deleted', 'success')
+    }
+
+    socket.on('fileReceived', handleFileReceived)
+    socket.on('fileDeleted', handleFileDeleted)
+
+    return () => {
+      socket.off('fileReceived', handleFileReceived)
+      socket.off('fileDeleted', handleFileDeleted)
+    }
+  }, [socket])
+
   const showNotification = (text, type='success') => {
     setNote({ text, type })
     setTimeout(()=> setNote(null), 3500)
@@ -56,7 +85,7 @@ export default function Chat(){
         <UsersList users={users} selectedId={selected?._id} onSelect={u=>setSelected(u)} loading={loading} />
       </div>
       <div className="flex-1">
-        <ConversationPanel userId={selected?._id} userObj={selected} showNotification={showNotification} />
+        <ConversationPanel userId={selected?._id} userObj={selected} showNotification={showNotification} refreshTrigger={refreshTrigger} />
       </div>
       <Notification note={note} />
     </div>
