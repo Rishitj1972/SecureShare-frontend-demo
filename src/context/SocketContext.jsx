@@ -52,12 +52,21 @@ export const SocketProvider = ({ children }) => {
         : undefined,
     });
 
+    console.log('[Socket] === CONNECTION DETAILS ===');
+    console.log('[Socket] URL:', socketUrl);
+    console.log('[Socket] Path:', '/socket.io');
+    console.log('[Socket] Namespace:', '/ (default)');
+    console.log('[Socket] Transports:', ['websocket', 'polling']);
+    console.log('[Socket] === END CONNECTION DETAILS ===');
+
     socketRef.current = newSocket;
     setSocket(newSocket);
 
     // Connection events
     newSocket.on('connect', () => {
       console.log('[Socket] Connected successfully with ID:', newSocket.id);
+      console.log('[Socket] Socket namespace:', newSocket.nsp);
+      console.log('[Socket] Connected to:', newSocket.io.uri);
       setIsConnected(true);
     });
 
@@ -76,8 +85,13 @@ export const SocketProvider = ({ children }) => {
     });
 
     // Global event tracer for debugging
+    let eventCount = 0;
     newSocket.onAny((event, ...args) => {
-      console.log('[Socket] Event', event, args);
+      eventCount++;
+      console.log(`[Socket] Event #${eventCount} [${event}]:`, args);
+      if (event === 'fileReceived' || event === 'fileReceivedBroadcast') {
+        console.error('[Socket] *** IMPORTANT EVENT RECEIVED ***', event, args);
+      }
     });
 
     // Broadcast diagnostic listener
