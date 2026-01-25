@@ -39,7 +39,33 @@ export default function UserFiles(){
     load()
   },[id, load])
 
-  // React to file received events exposed by SocketContext
+  // Direct socket listener (belt) to log any inbound fileReceived
+  useEffect(() => {
+    if (!socket || !isConnected) return
+    const handler = (data) => {
+      console.log('[UserFiles] direct socket fileReceived', data)
+    }
+    socket.on('fileReceived', handler)
+    return () => socket.off('fileReceived', handler)
+  }, [socket, isConnected])
+
+  // Listen to broadcast diagnostic to force refresh when receiver matches
+  useEffect(() => {
+    if (!socket || !isConnected || !user) return
+    const handler = (payload) => {
+      const { receiverId, fileData } = payload || {}
+      if (receiverId === user.id) {
+        console.log('[UserFiles] broadcast received for me', payload)
+        load()
+        setMsg('✨ New file received!')
+        setTimeout(() => setMsg(''), 3000)
+      }
+    }
+    socket.on('fileReceivedBroadcast', handler)
+    return () => socket.off('fileReceivedBroadcast', handler)
+  }, [socket, isConnected, user, load])
+
+  // React to file received events exposed by SocketContext (suspenders)
   useEffect(() => {
     if (!fileEvent || !user) return
     const { data } = fileEvent

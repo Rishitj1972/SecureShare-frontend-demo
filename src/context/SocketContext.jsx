@@ -80,6 +80,11 @@ export const SocketProvider = ({ children }) => {
       console.log('[Socket] Event', event, args);
     });
 
+    // Broadcast diagnostic listener
+    newSocket.on('fileReceivedBroadcast', (payload) => {
+      console.log('[Socket] Broadcast fileReceivedBroadcast', payload);
+    });
+
     // User online/offline events
     newSocket.on('userOnline', (data) => {
       console.log('[Socket] User online:', data.userId);
