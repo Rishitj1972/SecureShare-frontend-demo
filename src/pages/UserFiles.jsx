@@ -46,6 +46,7 @@ export default function UserFiles(){
     }
 
     const handleFileReceived = (fileData) => {
+      console.log('[UserFiles] fileReceived event', fileData)
       load()
       setMsg('✨ New file received!')
       setTimeout(() => setMsg(''), 3000)

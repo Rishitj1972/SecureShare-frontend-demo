@@ -45,6 +45,10 @@ export const SocketProvider = ({ children }) => {
       rejectUnauthorized: false,
       forceNew: false,
       secure: socketUrl.startsWith('https'),
+      path: '/socket.io',
+      extraHeaders: socketUrl.includes('ngrok')
+        ? { 'ngrok-skip-browser-warning': 'true' }
+        : undefined,
     });
 
     socketRef.current = newSocket;
@@ -68,6 +72,11 @@ export const SocketProvider = ({ children }) => {
 
     newSocket.on('error', (error) => {
       console.error('[Socket] Socket error:', error);
+    });
+
+    // Global event tracer for debugging
+    newSocket.onAny((event, ...args) => {
+      console.log('[Socket] Event', event, args);
     });
 
     // User online/offline events
