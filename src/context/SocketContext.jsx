@@ -36,11 +36,12 @@ export const SocketProvider = ({ children }) => {
       auth: {
         token: token,
       },
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
+      rejectUnauthorized: false,
     });
 
     // Connection events
@@ -55,7 +56,12 @@ export const SocketProvider = ({ children }) => {
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('❌ Socket connection error:', error.message);
+      console.error('Error data:', error);
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('❌ Socket error:', error);
     });
 
     // User online/offline events
