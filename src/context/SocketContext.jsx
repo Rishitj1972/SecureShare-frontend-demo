@@ -15,6 +15,7 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [fileEvent, setFileEvent] = useState(null); // last fileReceived payload
   const socketRef = useRef(null); // prevent duplicate sockets in StrictMode
 
   useEffect(() => {
@@ -97,6 +98,7 @@ export const SocketProvider = ({ children }) => {
     // Listen for file received notifications
     newSocket.on('fileReceived', (fileData) => {
       console.log('[Socket] File received notification:', fileData);
+      setFileEvent({ data: fileData, ts: Date.now() });
     });
 
     return () => {
@@ -107,7 +109,7 @@ export const SocketProvider = ({ children }) => {
   }, []);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected, onlineUsers }}>
+    <SocketContext.Provider value={{ socket, isConnected, onlineUsers, fileEvent }}>
       {children}
     </SocketContext.Provider>
   );

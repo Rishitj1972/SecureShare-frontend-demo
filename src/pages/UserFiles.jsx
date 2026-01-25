@@ -9,7 +9,7 @@ export default function UserFiles(){
   const { id } = useParams()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const { socket, isConnected } = useSocket()
+  const { socket, isConnected, fileEvent } = useSocket()
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
   const [msg, setMsg] = useState('')
@@ -39,25 +39,19 @@ export default function UserFiles(){
     load()
   },[id, load])
 
-  // Listen for file received events via socket
+  // React to file received events exposed by SocketContext
   useEffect(() => {
-    if (!socket || !isConnected) {
-      return
-    }
-
-    const handleFileReceived = (fileData) => {
-      console.log('[UserFiles] fileReceived event', fileData)
+    if (!fileEvent || !user) return
+    const { data } = fileEvent
+    // Refresh only if the event belongs to this conversation
+    const isForMe = data.receiver?.toString?.() === user.id
+    const involvesOther = data.sender?._id === id || data.sender === id || data.receiver === id
+    if (isForMe && involvesOther) {
       load()
       setMsg('✨ New file received!')
       setTimeout(() => setMsg(''), 3000)
     }
-
-    socket.on('fileReceived', handleFileReceived)
-
-    return () => {
-      socket.off('fileReceived', handleFileReceived)
-    }
-  }, [socket, isConnected, load])
+  }, [fileEvent, id, user, load])
 
   const submit = async (e) => {
     e.preventDefault()
