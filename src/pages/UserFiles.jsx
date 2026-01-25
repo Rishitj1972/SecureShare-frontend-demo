@@ -39,23 +39,36 @@ export default function UserFiles(){
     load()
   },[id, load])
 
+  // FALLBACK: Polling - refresh files every 3 seconds as insurance
+  useEffect(() => {
+    const interval = setInterval(() => {
+      load()
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [load])
+
   // Direct socket listener (belt) to log any inbound fileReceived
   useEffect(() => {
     if (!socket || !isConnected) return
     const handler = (data) => {
       console.log('[UserFiles] direct socket fileReceived', data)
+      // Force reload files immediately
+      load()
+      setMsg('✨ New file received!')
+      setTimeout(() => setMsg(''), 3000)
     }
     socket.on('fileReceived', handler)
     return () => socket.off('fileReceived', handler)
-  }, [socket, isConnected])
+  }, [socket, isConnected, load])
 
   // Listen to broadcast diagnostic to force refresh when receiver matches
   useEffect(() => {
     if (!socket || !isConnected || !user) return
     const handler = (payload) => {
       const { receiverId, fileData } = payload || {}
+      console.log('[UserFiles] broadcast received:', payload, 'current user:', user.id)
       if (receiverId === user.id) {
-        console.log('[UserFiles] broadcast received for me', payload)
+        console.log('[UserFiles] broadcast is for me, reloading')
         load()
         setMsg('✨ New file received!')
         setTimeout(() => setMsg(''), 3000)
@@ -64,6 +77,7 @@ export default function UserFiles(){
     socket.on('fileReceivedBroadcast', handler)
     return () => socket.off('fileReceivedBroadcast', handler)
   }, [socket, isConnected, user, load])
+
 
   // React to file received events exposed by SocketContext (suspenders)
   useEffect(() => {
