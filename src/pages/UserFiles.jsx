@@ -27,7 +27,6 @@ export default function UserFiles(){
       const other = usersRes.data.find(u => u._id === id)
       setOtherUser(other)
     }catch(err){
-      console.error(err)
       if (err?.response?.status === 401){
         logout()
         navigate('/login')
@@ -40,30 +39,21 @@ export default function UserFiles(){
     load()
   },[id, load])
 
-  // REAL-TIME NOTIFICATIONS: Listen for file received events via socket
+  // Listen for file received events via socket
   useEffect(() => {
     if (!socket || !isConnected) {
-      console.log('⏳ Waiting for socket connection...')
       return
     }
 
-    console.log('🔌 Socket connected - listening for file notifications')
-
     const handleFileReceived = (fileData) => {
-      console.log('🔔 Real-time notification: File received!', fileData)
-      console.log('File sender ID:', fileData.sender?._id, 'Current ID:', id)
-      
-      // Refresh the file list immediately when file is received
       load()
       setMsg('✨ New file received!')
       setTimeout(() => setMsg(''), 3000)
     }
 
     socket.on('fileReceived', handleFileReceived)
-    console.log('📡 Registered fileReceived listener')
 
     return () => {
-      console.log('🔌 Cleaning up fileReceived listener')
       socket.off('fileReceived', handleFileReceived)
     }
   }, [socket, isConnected, load])
@@ -148,6 +138,9 @@ export default function UserFiles(){
         ))}
         {files.length === 0 && <div>No files exchanged yet.</div>}
       </div>
+    </div>
+  )
+}
     </div>
   )
 }
