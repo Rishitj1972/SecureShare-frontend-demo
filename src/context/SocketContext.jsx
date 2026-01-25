@@ -52,51 +52,33 @@ export const SocketProvider = ({ children }) => {
         : undefined,
     });
 
-    console.log('[Socket] === CONNECTION DETAILS ===');
-    console.log('[Socket] URL:', socketUrl);
-    console.log('[Socket] Path:', '/socket.io');
-    console.log('[Socket] Namespace:', '/ (default)');
-    console.log('[Socket] Transports:', ['websocket', 'polling']);
-    console.log('[Socket] === END CONNECTION DETAILS ===');
-
     socketRef.current = newSocket;
     setSocket(newSocket);
 
+    console.log('[Socket] ✅ Socket instance created for:', socketUrl);
+
     // Connection events
     newSocket.on('connect', () => {
-      console.log('[Socket] Connected successfully with ID:', newSocket.id);
-      console.log('[Socket] Socket namespace:', newSocket.nsp);
-      console.log('[Socket] Connected to:', newSocket.io.uri);
+      console.log('[Socket] ✅ CONNECTED with ID:', newSocket.id);
       setIsConnected(true);
     });
 
     newSocket.on('disconnect', (reason) => {
-      console.log('[Socket] Disconnected. Reason:', reason);
+      console.log('[Socket] ❌ Disconnected:', reason);
       setIsConnected(false);
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('[Socket] Connection error:', error.message);
-      console.error('[Socket] Error type:', error.type);
+      console.error('[Socket] ⚠️ Connection error:', error.message);
     });
 
     newSocket.on('error', (error) => {
-      console.error('[Socket] Socket error:', error);
+      console.error('[Socket] ⚠️ Error:', error);
     });
 
-    // Global event tracer for debugging
-    let eventCount = 0;
+    // Global event tracer - logs EVERY event
     newSocket.onAny((event, ...args) => {
-      eventCount++;
-      console.log(`[Socket] Event #${eventCount} [${event}]:`, args);
-      if (event === 'fileReceived' || event === 'fileReceivedBroadcast') {
-        console.error('[Socket] *** IMPORTANT EVENT RECEIVED ***', event, args);
-      }
-    });
-
-    // Broadcast diagnostic listener
-    newSocket.on('fileReceivedBroadcast', (payload) => {
-      console.log('[Socket] Broadcast fileReceivedBroadcast', payload);
+      console.log('[Socket] 📨 Event:', event, args);
     });
 
     // User online/offline events
@@ -116,8 +98,16 @@ export const SocketProvider = ({ children }) => {
 
     // Listen for file received notifications
     newSocket.on('fileReceived', (fileData) => {
-      console.log('[Socket] File received notification:', fileData);
+      console.log('[Socket] 🎉 fileReceived:', fileData);
       setFileEvent({ data: fileData, ts: Date.now() });
+    });
+
+    // Broadcast diagnostic listener
+    newSocket.on('fileReceivedBroadcast', (payload) => {
+      console.log('[Socket] 🎉 fileReceivedBroadcast:', payload);
+    });
+
+    console.log('[Socket] ✅ All listeners attached');
     });
 
     return () => {
