@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import api from '../api/axios'
 
 const AuthContext = createContext()
@@ -13,7 +13,37 @@ export function AuthProvider({ children }){
     return raw ? JSON.parse(raw) : null
   })
 
-  
+  // Listen for logout triggered by axios interceptor or other tabs
+  useEffect(() => {
+    const handleLogout = () => {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      localStorage.removeItem('logout_triggered')
+      setUser(null)
+    }
+
+    // Listen for logout event from axios interceptor
+    window.addEventListener('logout', handleLogout)
+    
+    // Listen for storage changes from other tabs
+    const handleStorageChange = (e) => {
+      if (e.key === 'logout_triggered' || (e.key === 'token' && !e.newValue)) {
+        handleLogout()
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+
+    // Check if logout was triggered on app load
+    if (localStorage.getItem('logout_triggered')) {
+      handleLogout()
+    }
+
+    return () => {
+      window.removeEventListener('logout', handleLogout)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
+
   const login = async (email, password) => {
     try {
       const res = await api.post('/auth/login', { email, password }, {withCredentials: true})
@@ -27,6 +57,7 @@ export function AuthProvider({ children }){
       if(!currentUser) throw new Error('Invalid login response: no user data')
       
       localStorage.setItem('user', JSON.stringify(currentUser))
+      localStorage.removeItem('logout_triggered')
       setUser(currentUser)
       return currentUser
     } catch (error) {
@@ -49,6 +80,7 @@ export function AuthProvider({ children }){
     } finally {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      localStorage.removeItem('logout_triggered')
       setUser(null)
     }
   }
