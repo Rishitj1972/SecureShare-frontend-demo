@@ -24,15 +24,23 @@ export default function Chat(){
     const load = async () =>{
       setLoading(true)
       try{
+        console.log('Fetching users from API...')
         const res = await api.get('/users')
+        console.log('API Response:', res)
+        console.log('Response data:', res.data)
 
         if (!Array.isArray(res.data)) {
+          console.error('Invalid response - not an array:', res.data)
           throw new Error('Invalid users response')
         }
 
         const list = res.data.filter(u => u._id !== user?.id)
+        console.log('Filtered users list:', list)
         setUsers(list)
       }catch(err){
+        console.error('Error loading users:', err)
+        console.error('Error response:', err?.response)
+        console.error('Error message:', err?.response?.data?.message)
         setNote({ text: err?.response?.data?.message || 'Failed to load users', type: 'error' })
       }finally{
         setLoading(false)
