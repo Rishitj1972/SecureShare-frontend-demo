@@ -15,24 +15,16 @@ export function AuthProvider({ children }){
 
   
   const login = async (email, password) => {
-    try {
-      const res = await api.post('/auth/login', { email, password }, {withCredentials: true})
-      const accessToken = res.data?.accessToken || res.data?.token
-      if(!accessToken) throw new Error('Login response did not include access token')
-      localStorage.setItem('token', accessToken)
-      // Use user data from login response
-      const currentUser = {
-        _id: res.data._id,
-        name: res.data.name,
-        email: res.data.email
-      }
-      localStorage.setItem('user', JSON.stringify(currentUser))
-      setUser(currentUser)
-      return currentUser
-    } catch (error) {
-      console.error('Login error:', error.message)
-      throw error
-    }
+    const res = await api.post('/auth/login', { email, password }, {withCredentials: true})
+    const accessToken = res.data?.accessToken || res.data?.token
+    if(!accessToken) throw new Error('Login response did not include access token')
+    localStorage.setItem('token', accessToken)
+    // Fetch current user using the protected endpoint
+    const me = await api.post('/auth/current')
+    const currentUser = me.data
+    localStorage.setItem('user', JSON.stringify(currentUser))
+    setUser(currentUser)
+    return currentUser
   }
 
   const register = async (data) => {

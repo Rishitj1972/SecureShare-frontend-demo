@@ -2,15 +2,12 @@ import axios from 'axios'
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-console.log('API baseURL:', baseURL)
-
 const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true'
-  },
-  withCredentials: true
+    ...(baseURL.includes('ngrok') && { 'ngrok-skip-browser-warning': 'true' })
+  }
 });
 
 
