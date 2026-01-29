@@ -12,7 +12,7 @@ export default function Users(){
     const load = async () => {
       try{
         const res = await api.get('/users')
-        const list = res.data.filter(u => u._id !== user?._id)
+        const list = res.data.filter(u => u._id !== user?.id)
         setUsers(list)
       }catch(err){
         if (err?.response?.status === 401) {
