@@ -32,6 +32,15 @@ export default function UserFiles() {
           return
         }
 
+        // Prevent user from accessing their own file page
+        if (id === user?.id || id.toString() === user?.id?.toString()) {
+          setMsg('Cannot share files with yourself')
+          setMsgType('error')
+          setLoading(false)
+          setTimeout(() => navigate('/users'), 2000)
+          return
+        }
+
         const [filesRes, usersRes] = await Promise.all([
           api.get(`/files/with/${id}`),
           api.get('/users'),
@@ -56,7 +65,7 @@ export default function UserFiles() {
         setLoading(false)
       }
     },
-    [id, logout, navigate, isValidId]
+    [id, logout, navigate, isValidId, user?.id]
   )
 
   // Load files when component mounts or id changes
