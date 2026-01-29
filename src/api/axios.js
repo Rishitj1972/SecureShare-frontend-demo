@@ -17,7 +17,6 @@ api.interceptors.request.use((config) => {
   }
   // Ensure ngrok warning header is always sent
   config.headers['ngrok-skip-browser-warning'] = 'true'
-  config.headers['user-agent'] = 'secureShare-frontend'
   return config
 })
 
