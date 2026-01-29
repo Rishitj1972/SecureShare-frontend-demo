@@ -30,7 +30,7 @@ export default function Chat(){
           throw new Error('Invalid users response')
         }
 
-        const list = res.data.filter(u => u._id !== user?.id)
+        const list = res.data.filter(u => u._id.toString() !== user?.id)
         setUsers(list)
       }catch(err){
         setNote({ text: err?.response?.data?.message || 'Failed to load users', type: 'error' })
