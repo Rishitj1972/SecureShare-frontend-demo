@@ -12,12 +12,7 @@ export default function Users(){
     const load = async () => {
       try{
         const res = await api.get('/users')
-        // Filter out current user - compare both id and _id formats
-        const currentUserId = user?.id || user?._id
-        const list = res.data.filter(u => {
-          const otherUserId = u._id?.toString() || u._id
-          return otherUserId !== currentUserId && otherUserId.toString() !== currentUserId?.toString()
-        })
+        const list = res.data.filter(u => u._id !== user?.id)
         setUsers(list)
       }catch(err){
         if (err?.response?.status === 401) {

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import api from '../api/axios'
 import FileCard from './FileCard'
-import { splitFileIntoChunks, uploadChunksSequentially, triggerChunkMerge, cancelChunkUpload } from '../utils/chunkUploadUtil'
 
 export default function ConversationPanel({ userId, userObj, showNotification }){
   const [files, setFiles] = useState([])
@@ -9,8 +8,6 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const [uploadProgress, setUploadProgress] = useState(0)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
-  const [uploading, setUploading] = useState(false)
-  const uploadControllerRef = useRef(null)
   const mounted = useRef(true)
 
   useEffect(()=>{
@@ -36,67 +33,28 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const submit = async (e) => {
     e && e.preventDefault && e.preventDefault()
     if(!fileInput) return setMsg('Please select a file')
-    if(!userId) return setMsg('Please select a recipient')
-    
-    setUploading(true)
+    const fd = new FormData()
+    fd.append('file', fileInput)
+    fd.append('receiver', userId)
     setUploadProgress(0)
-    setMsg('Starting chunked upload...')
-
-    try {
-      // Generate unique fileId for this upload
-      const fileId = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
-      
-      // Split file into chunks (5MB each)
-      const chunks = splitFileIntoChunks(fileInput)
-      const totalChunks = chunks.length
-
-      setMsg(`Uploading ${totalChunks} chunk(s)...`)
-
-      // Upload chunks sequentially with progress tracking
-      const uploadResult = await uploadChunksSequentially(
-        fileId,
-        chunks,
-        totalChunks,
-        (progress, current, total) => {
-          setUploadProgress(progress)
-          setMsg(`Uploading chunk ${current}/${total}...`)
-        },
-        api
-      )
-
-      if (!uploadResult.success) {
-        const failedCount = uploadResult.failedChunks
-        throw new Error(`Failed to upload ${failedCount} chunk(s)`)
-      }
-
-      // All chunks uploaded, trigger merge
-      setMsg('Merging chunks...')
-      const mergeResult = await triggerChunkMerge(fileId, fileInput.name, userId, api)
-
+    try{
+      const res = await api.post('/files/send', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1))
+          setUploadProgress(percent)
+        }
+      })
       setMsg('File sent')
-      showNotification && showNotification('File sent successfully', 'success')
+      showNotification && showNotification('File sent', 'success')
       setFileInput(null)
       setUploadProgress(0)
-      
-      // Refresh file list
       const r = await api.get(`/files/with/${userId}`)
       setFiles(r.data)
-    } catch(err) {
-      const errorMsg = err?.response?.data?.message || err?.message || 'Upload failed'
+    }catch(err){
+      const errorMsg = err?.response?.data?.message || 'Upload failed'
       setMsg(errorMsg)
       showNotification && showNotification(errorMsg, 'error')
-      
-      // Attempt cleanup on error
-      if(uploadControllerRef.current) {
-        try {
-          await cancelChunkUpload(uploadControllerRef.current, api)
-        } catch (cleanupErr) {
-          // Ignore cleanup errors
-        }
-      }
-    } finally {
-      setUploading(false)
-      setUploadProgress(0)
     }
   }
 
@@ -123,7 +81,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
     <div className="h-full p-3 flex flex-col">
       <div className="border-b pb-2 mb-2">
         <div className="font-semibold">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
-        <div className="text-xs text-gray-500">Share files securely (chunked upload)</div>
+        <div className="text-xs text-gray-500">Share files securely</div>
       </div>
 
       <div className="flex-1 overflow-auto space-y-3 mb-3">
@@ -136,6 +94,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
               setFiles(prev => prev.filter(x => x._id !== id))
               showNotification && showNotification('File deleted', 'success')
             }catch(err){
+              console.error(err)
               showNotification && showNotification(err?.response?.data?.message || 'Delete failed', 'error')
             }
           }} />
@@ -145,8 +104,8 @@ export default function ConversationPanel({ userId, userObj, showNotification })
 
       <div className="mt-2 border-t pt-2 sticky bottom-0 bg-white z-10 shadow-md">
         <form className="flex items-center gap-2 py-2" onSubmit={submit}>
-          <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded cursor-pointer disabled:opacity-50" disabled={uploading}>
-            <input type="file" className="hidden" onChange={e=>setFileInput(e.target.files[0])} disabled={uploading} />
+          <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded cursor-pointer">
+            <input type="file" className="hidden" onChange={e=>setFileInput(e.target.files[0])} />
             <span>📎 Attach</span>
           </label>
           <div className="flex-1">
@@ -157,12 +116,10 @@ export default function ConversationPanel({ userId, userObj, showNotification })
               </div>
             )}
           </div>
-          <button className="btn" type="submit" disabled={uploading}>
-            {uploading ? 'Uploading...' : 'Send'}
-          </button>
+          <button className="btn" type="submit">Send</button>
         </form>
         {msg && <div className="mt-2 text-sm text-gray-600">{msg}</div>}
       </div>
     </div>
   )
-}
+}  
