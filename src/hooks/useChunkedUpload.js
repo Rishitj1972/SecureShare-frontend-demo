@@ -85,10 +85,12 @@ export function useChunkedUpload() {
     }
   }, [calculateChunkHash])
 
-  const uploadFile = useCallback(async (file, receiverId) => {
+  const uploadFile = useCallback(async (file, receiverId, onProgress) => {
     try {
       // Initialize upload
       const { uploadId, chunkSize, totalChunks } = await initUpload(file, receiverId)
+
+      let completedChunks = 0
 
       // Upload chunks in parallel (4 at a time for better performance)
       const PARALLEL_UPLOADS = 4
@@ -103,7 +105,13 @@ export function useChunkedUpload() {
           const chunkArrayBuffer = await chunk.arrayBuffer()
           const chunkUint8 = new Uint8Array(chunkArrayBuffer)
 
-          batch.push(uploadChunk(uploadId, chunkNum, chunkUint8, totalChunks))
+          batch.push(
+            uploadChunk(uploadId, chunkNum, chunkUint8, totalChunks).then(() => {
+              completedChunks++
+              const progress = Math.round((completedChunks / totalChunks) * 100)
+              if (onProgress) onProgress(progress)
+            })
+          )
         }
         
         // Wait for all chunks in batch to complete
@@ -111,6 +119,7 @@ export function useChunkedUpload() {
       }
 
       // Complete upload - send file hash for verification
+      if (onProgress) onProgress(95) // Show 95% while completing
       const fileBuffer = await file.arrayBuffer()
       const fileUint8 = new Uint8Array(fileBuffer)
       const fileHash = calculateChunkHash(fileUint8)
@@ -119,6 +128,8 @@ export function useChunkedUpload() {
         uploadId,
         fileHash
       })
+
+      if (onProgress) onProgress(100) // Show 100% when done
 
       setUploads(prev => ({
         ...prev,
