@@ -41,7 +41,7 @@ export function useChunkedUpload() {
     }
   }, [])
 
-  const uploadChunk = useCallback(async (uploadId, chunkNumber, chunkData) => {
+  const uploadChunk = useCallback(async (uploadId, chunkNumber, chunkData, totalChunks) => {
     try {
       const formData = new FormData()
       const blob = new Blob([chunkData])
@@ -50,7 +50,7 @@ export function useChunkedUpload() {
       formData.append('chunk', blob, `chunk_${chunkNumber}`)
       formData.append('uploadId', uploadId)
       formData.append('chunkNumber', chunkNumber)
-      formData.append('totalChunks', uploads[uploadId].totalChunks)
+      formData.append('totalChunks', totalChunks)
       formData.append('chunkHash', chunkHash)
 
       const res = await api.post('/files/chunked/upload-chunk', formData, {
@@ -79,7 +79,7 @@ export function useChunkedUpload() {
       }))
       throw error
     }
-  }, [uploads, calculateChunkHash])
+  }, [calculateChunkHash])
 
   const uploadFile = useCallback(async (file, receiverId) => {
     try {
@@ -95,7 +95,7 @@ export function useChunkedUpload() {
         const chunkArrayBuffer = await chunk.arrayBuffer()
         const chunkUint8 = new Uint8Array(chunkArrayBuffer)
 
-        await uploadChunk(uploadId, i, chunkUint8)
+        await uploadChunk(uploadId, i, chunkUint8, totalChunks)
       }
 
       // Complete upload
