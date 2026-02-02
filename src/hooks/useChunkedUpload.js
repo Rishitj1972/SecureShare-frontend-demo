@@ -46,14 +46,26 @@ export function useChunkedUpload() {
   const uploadChunk = useCallback(async (uploadId, chunkNumber, chunkData, totalChunks) => {
     try {
       const formData = new FormData()
-      const blob = new Blob([chunkData])
-      const chunkHash = calculateChunkHash(chunkData)
+      
+      // chunkData can be Blob or Uint8Array
+      const blob = chunkData instanceof Blob ? chunkData : new Blob([chunkData])
+      
+      // Skip hash calculation for very large chunks (> 20MB) to avoid memory issues
+      let chunkHash = null
+      if (blob.size <= 20 * 1024 * 1024) {
+        // For small chunks, calculate hash
+        const arrayBuffer = await blob.arrayBuffer()
+        const uint8 = new Uint8Array(arrayBuffer)
+        chunkHash = calculateChunkHash(uint8)
+      }
 
       formData.append('chunk', blob, `chunk_${chunkNumber}`)
       formData.append('uploadId', uploadId)
       formData.append('chunkNumber', chunkNumber)
       formData.append('totalChunks', totalChunks)
-      formData.append('chunkHash', chunkHash)
+      if (chunkHash) {
+        formData.append('chunkHash', chunkHash)
+      }
 
       const res = await api.post('/files/chunked/upload-chunk', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -121,11 +133,9 @@ export function useChunkedUpload() {
           const end = Math.min(start + chunkSize, file.size)
           const chunk = file.slice(start, end)
 
-          const chunkArrayBuffer = await chunk.arrayBuffer()
-          const chunkUint8 = new Uint8Array(chunkArrayBuffer)
-
+          // Use Blob directly instead of arrayBuffer to avoid memory issues with large chunks
           batch.push(
-            uploadChunk(uploadId, chunkNum, chunkUint8, totalChunks)
+            uploadChunk(uploadId, chunkNum, chunk, totalChunks)
               .then(() => {
                 completedChunks++
                 const progress = Math.round((completedChunks / totalChunks) * 95) // Reserve 95-100% for finalization
