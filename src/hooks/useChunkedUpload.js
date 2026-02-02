@@ -90,19 +90,27 @@ export function useChunkedUpload() {
       // Initialize upload
       const { uploadId, chunkSize, totalChunks } = await initUpload(file, receiverId)
 
-      // Upload chunks sequentially
-      for (let i = 1; i <= totalChunks; i++) {
-        const start = (i - 1) * chunkSize
-        const end = Math.min(start + chunkSize, file.size)
-        const chunk = file.slice(start, end)
+      // Upload chunks in parallel (4 at a time for better performance)
+      const PARALLEL_UPLOADS = 4
+      for (let i = 1; i <= totalChunks; i += PARALLEL_UPLOADS) {
+        const batch = []
+        for (let j = 0; j < PARALLEL_UPLOADS && i + j <= totalChunks; j++) {
+          const chunkNum = i + j
+          const start = (chunkNum - 1) * chunkSize
+          const end = Math.min(start + chunkSize, file.size)
+          const chunk = file.slice(start, end)
 
-        const chunkArrayBuffer = await chunk.arrayBuffer()
-        const chunkUint8 = new Uint8Array(chunkArrayBuffer)
+          const chunkArrayBuffer = await chunk.arrayBuffer()
+          const chunkUint8 = new Uint8Array(chunkArrayBuffer)
 
-        await uploadChunk(uploadId, i, chunkUint8, totalChunks)
+          batch.push(uploadChunk(uploadId, chunkNum, chunkUint8, totalChunks))
+        }
+        
+        // Wait for all chunks in batch to complete
+        await Promise.all(batch)
       }
 
-      // Complete upload
+      // Complete upload - send file hash for verification
       const fileBuffer = await file.arrayBuffer()
       const fileUint8 = new Uint8Array(fileBuffer)
       const fileHash = calculateChunkHash(fileUint8)
