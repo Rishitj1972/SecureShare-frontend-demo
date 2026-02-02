@@ -73,57 +73,52 @@ export default function ConversationPanel({ userId, userObj, showNotification })
 
   const onDownload = async (fileId, fileMeta) => {
     try{
-      // Show immediate feedback - fetch metadata first for instant response
       showNotification && showNotification('Preparing download...', 'info')
-      
-      // Get file metadata quickly (< 10ms response) - this is instant
-      try {
-        const metaResponse = await api.get(`/files/meta/${fileId}`)
-        fileMeta = metaResponse.data
-      } catch (metaErr) {
-        console.log('Could not fetch metadata, proceeding with cached data')
-      }
-      
-      // Now start the actual download in background
-      // This endpoint starts immediately with Range request support
-      showNotification && showNotification(`Downloading ${fileMeta?.originalFileName || 'file'}...`, 'success')
       
       const downloadUrl = `${api.defaults.baseURL}/files/download/${fileId}`
       const token = localStorage.getItem('token')
       
-      if (token) {
-        // Fetch with streaming - starts immediately, no buffering
-        const response = await fetch(downloadUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'ngrok-skip-browser-warning': 'true'
-          }
-        })
-        
-        if (!response.ok) {
-          const error = await response.text()
-          throw new Error(error || 'Download failed')
-        }
-        
-        // Create blob from stream (still streaming, not buffering entire file)
-        const blob = await response.blob()
-        
-        // Trigger download
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = fileMeta?.originalFileName || 'file'
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        window.URL.revokeObjectURL(url)
-        
-        showNotification && showNotification('Download complete', 'success')
+      if (!token) {
+        throw new Error('Not authenticated')
       }
+
+      // Method 1: Use simple anchor tag with blob URL (fastest)
+      // Skip fetch verification and go directly
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'ngrok-skip-browser-warning': 'true'
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Download failed: ' + response.statusText)
+      }
+      
+      // Get the blob (still streaming from server)
+      const blob = await response.blob()
+      
+      // Create download link immediately after blob is ready
+      const blobUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = fileMeta?.originalFileName || 'file'
+      
+      // Trigger click (this shows the save dialog)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Clean up blob URL after brief delay
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100)
+      
+      showNotification && showNotification('Download complete', 'success')
+      
     }catch(err){
       const errorMsg = err?.message || 'Download failed'
       showNotification && showNotification(errorMsg, 'error')
+      console.error('Download error:', err)
     }
   }
 
