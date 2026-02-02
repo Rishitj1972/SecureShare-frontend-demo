@@ -108,7 +108,7 @@ export function useChunkedUpload() {
           batch.push(
             uploadChunk(uploadId, chunkNum, chunkUint8, totalChunks).then(() => {
               completedChunks++
-              const progress = Math.round((completedChunks / totalChunks) * 100)
+              const progress = Math.round((completedChunks / totalChunks) * 95) // Reserve 95-100% for finalization
               if (onProgress) onProgress(progress)
             })
           )
@@ -118,15 +118,11 @@ export function useChunkedUpload() {
         await Promise.all(batch)
       }
 
-      // Complete upload - send file hash for verification
-      if (onProgress) onProgress(95) // Show 95% while completing
-      const fileBuffer = await file.arrayBuffer()
-      const fileUint8 = new Uint8Array(fileBuffer)
-      const fileHash = calculateChunkHash(fileUint8)
-
+      // Complete upload - backend will verify integrity from assembled file
+      if (onProgress) onProgress(96) // Show 96% while completing
       const completeRes = await api.post('/files/chunked/complete', {
         uploadId,
-        fileHash
+        fileHash: null // Backend will calculate hash from assembled file
       })
 
       if (onProgress) onProgress(100) // Show 100% when done
@@ -145,7 +141,7 @@ export function useChunkedUpload() {
       console.error('Upload failed:', error)
       throw error
     }
-  }, [initUpload, uploadChunk, calculateChunkHash])
+  }, [initUpload, uploadChunk])
 
   const getUploadStatus = useCallback(async (uploadId) => {
     try {
