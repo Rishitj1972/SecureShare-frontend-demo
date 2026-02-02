@@ -11,13 +11,14 @@ export function useChunkedUpload() {
     return CryptoJS.SHA256(wordArray).toString()
   }, [])
 
-  const initUpload = useCallback(async (file, receiverId) => {
+  const initUpload = useCallback(async (file, receiverId, preferredChunkSize) => {
     try {
       const res = await api.post('/files/chunked/init', {
         filename: file.name,
         fileSize: file.size,
         receiver: receiverId,
-        mimeType: file.type
+        mimeType: file.type,
+        preferredChunkSize
       })
 
       const { uploadId, chunkSize, totalChunks } = res.data
@@ -68,7 +69,8 @@ export function useChunkedUpload() {
       }
 
       const res = await api.post('/files/chunked/upload-chunk', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 0
       })
 
       const uploadedChunks = res.data.uploadedChunks || []
@@ -120,7 +122,7 @@ export function useChunkedUpload() {
       }
 
       // Initialize upload
-      const { uploadId, chunkSize, totalChunks } = await initUpload(file, receiverId)
+      const { uploadId, chunkSize, totalChunks } = await initUpload(file, receiverId, dynamicChunkSize)
 
       let completedChunks = 0
 
@@ -157,6 +159,8 @@ export function useChunkedUpload() {
       const completeRes = await api.post('/files/chunked/complete', {
         uploadId,
         fileHash: null // Backend will calculate hash from assembled file
+      }, {
+        timeout: 0
       })
 
       if (onProgress) onProgress(100) // Show 100% when done
