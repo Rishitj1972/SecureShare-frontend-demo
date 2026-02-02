@@ -57,12 +57,14 @@ export function useChunkedUpload() {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
 
+      const uploadedChunks = res.data.uploadedChunks || []
+      
       setUploads(prev => ({
         ...prev,
         [uploadId]: {
           ...prev[uploadId],
-          uploadedChunks: res.data.uploadedChunks,
-          progress: Math.round((res.data.uploadedChunks.length / res.data.totalChunks) * 100),
+          uploadedChunks: uploadedChunks,
+          progress: Math.round((uploadedChunks.length / totalChunks) * 100),
           status: 'uploading'
         }
       }))
