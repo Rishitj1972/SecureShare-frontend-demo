@@ -46,7 +46,7 @@ export function useChunkedUpload() {
     }
   }, [])
 
-  const uploadChunk = useCallback(async (uploadId, chunkNumber, chunkData, totalChunks) => {
+  const uploadChunk = useCallback(async (uploadId, chunkNumber, chunkData, totalChunks, onChunkProgress) => {
     const maxRetries = 2
     let lastError = null
 
@@ -76,7 +76,12 @@ export function useChunkedUpload() {
 
         const res = await api.post('/files/chunked/upload-chunk', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: 0
+          timeout: 0,
+          onUploadProgress: (event) => {
+            if (!onChunkProgress || !event.total) return
+            const percent = Math.min(100, Math.round((event.loaded / event.total) * 100))
+            onChunkProgress(percent)
+          }
         })
 
         const uploadedChunks = res.data.uploadedChunks || []
@@ -131,7 +136,10 @@ export function useChunkedUpload() {
     const runUpload = async ({ chunkSize: preferredChunkSize, parallel }) => {
       const { uploadId, chunkSize, totalChunks } = await initUpload(file, receiverId, preferredChunkSize)
 
+      if (onProgress) onProgress(1)
+
       let completedChunks = 0
+      const inFlightProgress = {}
 
       for (let i = 1; i <= totalChunks; i += parallel) {
         const batch = []
@@ -142,8 +150,16 @@ export function useChunkedUpload() {
           const chunk = file.slice(start, end)
 
           batch.push(
-            uploadChunk(uploadId, chunkNum, chunk, totalChunks)
+            uploadChunk(uploadId, chunkNum, chunk, totalChunks, (percent) => {
+              inFlightProgress[chunkNum] = percent
+              if (onProgress) {
+                const inFlightSum = Object.values(inFlightProgress).reduce((acc, val) => acc + val, 0)
+                const progress = Math.round(((completedChunks + (inFlightSum / 100)) / totalChunks) * 95)
+                onProgress(progress)
+              }
+            })
               .then(() => {
+                delete inFlightProgress[chunkNum]
                 completedChunks++
                 const progress = Math.round((completedChunks / totalChunks) * 95)
                 if (onProgress) onProgress(progress)
