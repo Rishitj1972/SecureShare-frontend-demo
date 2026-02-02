@@ -87,16 +87,35 @@ export function useChunkedUpload() {
 
   const uploadFile = useCallback(async (file, receiverId, onProgress) => {
     try {
+      // Dynamic chunk sizing based on file size
+      let dynamicChunkSize = 5 * 1024 * 1024; // Default 5MB for small files
+      let parallelUploads = 2; // Default 2 parallel for small files
+
+      const fileSizeInMB = file.size / (1024 * 1024);
+
+      if (fileSizeInMB < 50) {
+        // Small files: 5MB chunks, 2 parallel
+        dynamicChunkSize = 5 * 1024 * 1024;
+        parallelUploads = 2;
+      } else if (fileSizeInMB < 500) {
+        // Medium files: 25MB chunks, 4 parallel
+        dynamicChunkSize = 25 * 1024 * 1024;
+        parallelUploads = 4;
+      } else {
+        // Large files: 50MB chunks, 6 parallel
+        dynamicChunkSize = 50 * 1024 * 1024;
+        parallelUploads = 6;
+      }
+
       // Initialize upload
       const { uploadId, chunkSize, totalChunks } = await initUpload(file, receiverId)
 
       let completedChunks = 0
 
-      // Upload chunks in parallel (2 at a time for stability with large files)
-      const PARALLEL_UPLOADS = 2
-      for (let i = 1; i <= totalChunks; i += PARALLEL_UPLOADS) {
+      // Upload chunks in parallel with dynamic count
+      for (let i = 1; i <= totalChunks; i += parallelUploads) {
         const batch = []
-        for (let j = 0; j < PARALLEL_UPLOADS && i + j <= totalChunks; j++) {
+        for (let j = 0; j < parallelUploads && i + j <= totalChunks; j++) {
           const chunkNum = i + j
           const start = (chunkNum - 1) * chunkSize
           const end = Math.min(start + chunkSize, file.size)
