@@ -1,12 +1,14 @@
 import { useState, useCallback } from 'react'
 import api from '../api/axios'
-import crypto from 'crypto-js'
+import CryptoJS from 'crypto-js'
 
 export function useChunkedUpload() {
   const [uploads, setUploads] = useState({}) // uploadId -> upload state
 
   const calculateChunkHash = useCallback((chunk) => {
-    return crypto.SHA256(chunk).toString()
+    // Convert Uint8Array to hex string for hashing
+    const wordArray = CryptoJS.lib.WordArray.create(chunk)
+    return CryptoJS.SHA256(wordArray).toString()
   }, [])
 
   const initUpload = useCallback(async (file, receiverId) => {
