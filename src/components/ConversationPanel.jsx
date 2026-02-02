@@ -73,48 +73,25 @@ export default function ConversationPanel({ userId, userObj, showNotification })
 
   const onDownload = async (fileId, fileMeta) => {
     try{
-      showNotification && showNotification('Preparing download...', 'info')
-      
-      const downloadUrl = `${api.defaults.baseURL}/files/download/${fileId}`
+      showNotification && showNotification('Starting download...', 'info')
+
       const token = localStorage.getItem('token')
-      
       if (!token) {
         throw new Error('Not authenticated')
       }
 
-      // Method 1: Use simple anchor tag with blob URL (fastest)
-      // Skip fetch verification and go directly
-      const response = await fetch(downloadUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'ngrok-skip-browser-warning': 'true'
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error('Download failed: ' + response.statusText)
-      }
-      
-      // Get the blob (still streaming from server)
-      const blob = await response.blob()
-      
-      // Create download link immediately after blob is ready
-      const blobUrl = window.URL.createObjectURL(blob)
+      const downloadUrl = `${api.defaults.baseURL}/files/download/${fileId}?token=${encodeURIComponent(token)}`
+
       const link = document.createElement('a')
-      link.href = blobUrl
+      link.href = downloadUrl
       link.download = fileMeta?.originalFileName || 'file'
-      
-      // Trigger click (this shows the save dialog)
+      link.style.display = 'none'
+
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
-      // Clean up blob URL after brief delay
-      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100)
-      
-      showNotification && showNotification('Download complete', 'success')
-      
+
+      showNotification && showNotification('Download started', 'success')
     }catch(err){
       const errorMsg = err?.message || 'Download failed'
       showNotification && showNotification(errorMsg, 'error')
