@@ -6,7 +6,10 @@ const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 300000, // 5 minutes timeout for large file uploads
+  maxContentLength: Infinity,
+  maxBodyLength: Infinity
 });
 
 // Add headers to every request including ngrok warning bypass

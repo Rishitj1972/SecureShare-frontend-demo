@@ -92,8 +92,8 @@ export function useChunkedUpload() {
 
       let completedChunks = 0
 
-      // Upload chunks in parallel (4 at a time for better performance)
-      const PARALLEL_UPLOADS = 4
+      // Upload chunks in parallel (2 at a time for stability with large files)
+      const PARALLEL_UPLOADS = 2
       for (let i = 1; i <= totalChunks; i += PARALLEL_UPLOADS) {
         const batch = []
         for (let j = 0; j < PARALLEL_UPLOADS && i + j <= totalChunks; j++) {
@@ -106,11 +106,16 @@ export function useChunkedUpload() {
           const chunkUint8 = new Uint8Array(chunkArrayBuffer)
 
           batch.push(
-            uploadChunk(uploadId, chunkNum, chunkUint8, totalChunks).then(() => {
-              completedChunks++
-              const progress = Math.round((completedChunks / totalChunks) * 95) // Reserve 95-100% for finalization
-              if (onProgress) onProgress(progress)
-            })
+            uploadChunk(uploadId, chunkNum, chunkUint8, totalChunks)
+              .then(() => {
+                completedChunks++
+                const progress = Math.round((completedChunks / totalChunks) * 95) // Reserve 95-100% for finalization
+                if (onProgress) onProgress(progress)
+              })
+              .catch((err) => {
+                console.error(`Failed to upload chunk ${chunkNum}:`, err)
+                throw err
+              })
           )
         }
         
