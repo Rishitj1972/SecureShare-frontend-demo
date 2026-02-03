@@ -190,7 +190,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
             <div className="font-semibold">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
             <div className="text-xs text-gray-500">Share files securely</div>
           </div>
-          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v3.0.0 🔐 E2EE</div>
+          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v3.0.1 🔐 E2EE</div>
         </div>
       </div>
 
