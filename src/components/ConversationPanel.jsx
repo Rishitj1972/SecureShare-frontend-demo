@@ -241,79 +241,30 @@ export default function ConversationPanel({ userId, userObj, showNotification })
         {loading && <div className="text-sm text-gray-500">Loading files...</div>}
         
         {!loading && files.length > 0 && (
-          <>
-            {/* Received Files Section */}
-            {files.filter(f => f.receiver._id === user?.id).length > 0 && (
-              <div className="space-y-2">
-                <div className="sticky top-0 bg-white z-10 pb-2">
-                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm">📥</span>
-                    </div>
-                    <span>Received Files</span>
-                    <span className="text-blue-600">({files.filter(f => f.receiver._id === user?.id).length})</span>
-                  </div>
-                </div>
-                {files.filter(f => f.receiver._id === user?.id).map(f => (
-                  <FileCard 
-                    key={f._id} 
-                    file={f} 
-                    isSent={false}
-                    currentUserId={user?.id}
-                    isDownloading={isDownloading}
-                    downloadProgress={downloadProgress}
-                    downloadStage={downloadStage}
-                    onDownload={() => onDownload(f._id, f)} 
-                    onDelete={async (id) => {
-                      if (!window.confirm('Delete this file? This cannot be undone.')) return
-                      try{
-                        await api.delete(`/files/${id}`)
-                        setFiles(prev => prev.filter(x => x._id !== id))
-                        showNotification && showNotification('File deleted', 'success')
-                      }catch(err){
-                        showNotification && showNotification(err?.response?.data?.message || 'Delete failed', 'error')
-                      }
-                    }} 
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Sent Files Section */}
-            {files.filter(f => f.sender._id === user?.id).length > 0 && (
-              <div className="space-y-2 mt-6">
-                <div className="sticky top-0 bg-white z-10 pb-2">
-                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm">📤</span>
-                    </div>
-                    <span>Sent Files</span>
-                    <span className="text-green-600">({files.filter(f => f.sender._id === user?.id).length})</span>
-                  </div>
-                </div>
-                {files.filter(f => f.sender._id === user?.id).map(f => (
-                  <FileCard 
-                    key={f._id} 
-                    file={f} 
-                    isSent={true}
-                    currentUserId={user?.id}
-                    isDownloading={false}
-                    onDownload={() => onDownload(f._id, f)} 
-                    onDelete={async (id) => {
-                      if (!window.confirm('Delete this file? This cannot be undone.')) return
-                      try{
-                        await api.delete(`/files/${id}`)
-                        setFiles(prev => prev.filter(x => x._id !== id))
-                        showNotification && showNotification('File deleted', 'success')
-                      }catch(err){
-                        showNotification && showNotification(err?.response?.data?.message || 'Delete failed', 'error')
-                      }
-                    }} 
-                  />
-                ))}
-              </div>
-            )}
-          </>
+          <div className="space-y-2">
+            {files.map(f => (
+              <FileCard 
+                key={f._id} 
+                file={f} 
+                isSent={f.sender._id === user?.id}
+                currentUserId={user?.id}
+                isDownloading={isDownloading}
+                downloadProgress={downloadProgress}
+                downloadStage={downloadStage}
+                onDownload={() => onDownload(f._id, f)} 
+                onDelete={async (id) => {
+                  if (!window.confirm('Delete this file? This cannot be undone.')) return
+                  try{
+                    await api.delete(`/files/${id}`)
+                    setFiles(prev => prev.filter(x => x._id !== id))
+                    showNotification && showNotification('File deleted', 'success')
+                  }catch(err){
+                    showNotification && showNotification(err?.response?.data?.message || 'Delete failed', 'error')
+                  }
+                }} 
+              />
+            ))}
+          </div>
         )}
         
         {files.length === 0 && !loading && <div className="text-sm text-gray-500">No files exchanged yet.</div>}
