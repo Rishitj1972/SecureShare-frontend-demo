@@ -145,8 +145,13 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   return (
     <div className="h-full p-3 flex flex-col">
       <div className="border-b pb-2 mb-2">
-        <div className="font-semibold">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
-        <div className="text-xs text-gray-500">Share files securely</div>
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="font-semibold">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
+            <div className="text-xs text-gray-500">Share files securely</div>
+          </div>
+          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v2.5.0</div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto space-y-3 mb-3">
