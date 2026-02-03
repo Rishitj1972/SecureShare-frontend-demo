@@ -237,49 +237,85 @@ export default function ConversationPanel({ userId, userObj, showNotification })
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto space-y-3 mb-3">
+      <div className="flex-1 overflow-auto space-y-4 mb-3 px-2">
         {loading && <div className="text-sm text-gray-500">Loading files...</div>}
         
-        {/* Download Progress Indicator */}
-        {isDownloading && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-semibold text-blue-900">
-                {downloadStage === 'downloading' && `📥 Downloading...`}
-                {downloadStage === 'decrypting' && `🔓 Decrypting...`}
-                {downloadStage === 'verifying' && `✓ Verifying integrity...`}
-                {downloadStage === 'complete' && `✅ Complete!`}
-                {downloadStage === 'starting' && `⏳ Preparing download...`}
+        {!loading && files.length > 0 && (
+          <>
+            {/* Received Files Section */}
+            {files.filter(f => f.receiver._id === user?.id).length > 0 && (
+              <div className="space-y-2">
+                <div className="sticky top-0 bg-white z-10 pb-2">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm">📥</span>
+                    </div>
+                    <span>Received Files</span>
+                    <span className="text-blue-600">({files.filter(f => f.receiver._id === user?.id).length})</span>
+                  </div>
+                </div>
+                {files.filter(f => f.receiver._id === user?.id).map(f => (
+                  <FileCard 
+                    key={f._id} 
+                    file={f} 
+                    isSent={false}
+                    currentUserId={user?.id}
+                    isDownloading={isDownloading}
+                    downloadProgress={downloadProgress}
+                    downloadStage={downloadStage}
+                    onDownload={() => onDownload(f._id, f)} 
+                    onDelete={async (id) => {
+                      if (!window.confirm('Delete this file? This cannot be undone.')) return
+                      try{
+                        await api.delete(`/files/${id}`)
+                        setFiles(prev => prev.filter(x => x._id !== id))
+                        showNotification && showNotification('File deleted', 'success')
+                      }catch(err){
+                        showNotification && showNotification(err?.response?.data?.message || 'Delete failed', 'error')
+                      }
+                    }} 
+                  />
+                ))}
               </div>
-              <div className="text-xs text-blue-600 font-bold">{downloadProgress}%</div>
-            </div>
-            <div className="w-full bg-blue-200 h-2.5 rounded-full overflow-hidden">
-              <div 
-                style={{width: `${downloadProgress}%`}} 
-                className="h-2.5 bg-blue-600 rounded-full transition-all duration-300"
-              />
-            </div>
-            <div className="text-xs text-blue-600 mt-1">
-              {downloadProgress < 60 && 'Fetching file from server...'}
-              {downloadProgress >= 60 && downloadProgress < 90 && 'Decrypting with your private key...'}
-              {downloadProgress >= 90 && downloadProgress < 100 && 'Checking file integrity...'}
-              {downloadProgress === 100 && 'Ready to save!'}
-            </div>
-          </div>
+            )}
+
+            {/* Sent Files Section */}
+            {files.filter(f => f.sender._id === user?.id).length > 0 && (
+              <div className="space-y-2 mt-6">
+                <div className="sticky top-0 bg-white z-10 pb-2">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm">📤</span>
+                    </div>
+                    <span>Sent Files</span>
+                    <span className="text-green-600">({files.filter(f => f.sender._id === user?.id).length})</span>
+                  </div>
+                </div>
+                {files.filter(f => f.sender._id === user?.id).map(f => (
+                  <FileCard 
+                    key={f._id} 
+                    file={f} 
+                    isSent={true}
+                    currentUserId={user?.id}
+                    isDownloading={false}
+                    onDownload={() => onDownload(f._id, f)} 
+                    onDelete={async (id) => {
+                      if (!window.confirm('Delete this file? This cannot be undone.')) return
+                      try{
+                        await api.delete(`/files/${id}`)
+                        setFiles(prev => prev.filter(x => x._id !== id))
+                        showNotification && showNotification('File deleted', 'success')
+                      }catch(err){
+                        showNotification && showNotification(err?.response?.data?.message || 'Delete failed', 'error')
+                      }
+                    }} 
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
         
-        {files.map(f => (
-          <FileCard key={f._id} file={f} onDownload={() => onDownload(f._id, f)} onDelete={async (id) => {
-            if (!window.confirm('Delete this file? This cannot be undone.')) return
-            try{
-              await api.delete(`/files/${id}`)
-              setFiles(prev => prev.filter(x => x._id !== id))
-              showNotification && showNotification('File deleted', 'success')
-            }catch(err){
-              showNotification && showNotification(err?.response?.data?.message || 'Delete failed', 'error')
-            }
-          }} />
-        ))}
         {files.length === 0 && !loading && <div className="text-sm text-gray-500">No files exchanged yet.</div>}
       </div>
 
