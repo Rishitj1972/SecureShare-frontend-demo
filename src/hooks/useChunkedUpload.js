@@ -155,7 +155,7 @@ export function useChunkedUpload() {
       if (onProgress) onProgress(1)
 
       let completedChunks = 0
-      const inFlightProgress = {}
+      let lastReportedProgress = 1
 
       for (let i = 1; i <= totalChunks; i += parallel) {
         const batch = []
@@ -166,19 +166,16 @@ export function useChunkedUpload() {
           const chunk = file.slice(start, end)
 
           batch.push(
-            uploadChunk(uploadId, chunkNum, chunk, totalChunks, (percent) => {
-              inFlightProgress[chunkNum] = percent
-              if (onProgress) {
-                const inFlightSum = Object.values(inFlightProgress).reduce((acc, val) => acc + val, 0)
-                const progress = Math.round(((completedChunks + (inFlightSum / 100)) / totalChunks) * 95)
-                onProgress(progress)
-              }
-            })
+            uploadChunk(uploadId, chunkNum, chunk, totalChunks, null)
               .then(() => {
-                delete inFlightProgress[chunkNum]
                 completedChunks++
-                const progress = Math.round((completedChunks / totalChunks) * 95)
-                if (onProgress) onProgress(progress)
+                // Calculate progress (0-95%, saving 95-100% for finalization)
+                const newProgress = Math.min(95, Math.round((completedChunks / totalChunks) * 95))
+                // Only report if progress increased
+                if (newProgress > lastReportedProgress) {
+                  lastReportedProgress = newProgress
+                  if (onProgress) onProgress(newProgress)
+                }
               })
           )
         }
