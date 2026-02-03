@@ -53,18 +53,43 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
     setIsUploading(true)
     setUploadError(null)
     setUploadProgress(0)
+    setUploadSpeed(0)
+    setTimeRemaining(null)
 
     const startTime = Date.now()
-    const startSize = 0
+    let lastProgressTime = startTime
+    let lastProgress = 0
 
     try {
-      // Note: In production, you'd want to update progress in real-time
-      // For now, we'll do a simple progress tracking
       const uploadResult = await uploadFile(
         selectedFile, 
         recipientId, 
         (progress) => {
           setUploadProgress(progress)
+          
+          // Calculate speed and time remaining in real-time
+          const now = Date.now()
+          const elapsedTime = (now - startTime) / 1000 // seconds
+          const progressDelta = progress - lastProgress
+          
+          if (elapsedTime > 0 && progress > 0) {
+            // Calculate upload speed
+            const bytesUploaded = (progress / 100) * selectedFile.size
+            const speed = bytesUploaded / elapsedTime
+            setUploadSpeed(speed)
+            
+            // Calculate time remaining
+            if (progress < 100 && speed > 0) {
+              const bytesRemaining = selectedFile.size - bytesUploaded
+              const timeLeft = bytesRemaining / speed
+              setTimeRemaining(timeLeft)
+            } else {
+              setTimeRemaining(0)
+            }
+          }
+          
+          lastProgress = progress
+          lastProgressTime = now
         },
         (uploadId) => {
           setCurrentUploadId(uploadId)
@@ -72,12 +97,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
       )
 
       if (uploadResult.success) {
-        const endTime = Date.now()
-        const totalTime = (endTime - startTime) / 1000 // seconds
-        const avgSpeed = selectedFile.size / totalTime
-
         setUploadProgress(100)
-        setUploadSpeed(avgSpeed)
         setTimeRemaining(0)
 
         setSelectedFile(null)
