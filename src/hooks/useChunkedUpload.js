@@ -157,6 +157,17 @@ export function useChunkedUpload() {
       let completedChunks = 0
       let lastReportedProgress = 1
 
+      const reportProgress = () => {
+        const newProgress = Math.min(95, Math.round((completedChunks / totalChunks) * 95))
+        if (newProgress > lastReportedProgress) {
+          lastReportedProgress = newProgress
+          if (onProgress) {
+            console.log(`Upload progress: ${newProgress}% (${completedChunks}/${totalChunks} chunks)`)
+            onProgress(newProgress)
+          }
+        }
+      }
+
       for (let i = 1; i <= totalChunks; i += parallel) {
         const batch = []
         for (let j = 0; j < parallel && i + j <= totalChunks; j++) {
@@ -169,13 +180,7 @@ export function useChunkedUpload() {
             uploadChunk(uploadId, chunkNum, chunk, totalChunks, null)
               .then(() => {
                 completedChunks++
-                // Calculate progress (0-95%, saving 95-100% for finalization)
-                const newProgress = Math.min(95, Math.round((completedChunks / totalChunks) * 95))
-                // Only report if progress increased
-                if (newProgress > lastReportedProgress) {
-                  lastReportedProgress = newProgress
-                  if (onProgress) onProgress(newProgress)
-                }
+                reportProgress()
               })
           )
         }

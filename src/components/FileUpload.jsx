@@ -67,15 +67,16 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
         selectedFile, 
         recipientId, 
         (progress) => {
+          console.log('Progress callback received:', progress)
           // Ensure progress never decreases
-          const safeProgress = Math.max(lastProgress, progress)
+          const safeProgress = Math.max(lastProgress, Math.round(progress))
           setUploadProgress(safeProgress)
           
           const now = Date.now()
           const elapsedTime = (now - startTime) / 1000
           
-          // Update speed calculation every 500ms to avoid too frequent updates
-          if (now - lastUpdateTime > 500 && safeProgress > 0 && elapsedTime > 0) {
+          // Calculate speed and time remaining
+          if (safeProgress > 0 && elapsedTime > 0) {
             const bytesUploaded = (safeProgress / 100) * selectedFile.size
             const speed = bytesUploaded / elapsedTime
             setUploadSpeed(speed)
@@ -88,8 +89,6 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
             } else {
               setTimeRemaining(0)
             }
-            
-            lastUpdateTime = now
           }
           
           lastProgress = safeProgress
