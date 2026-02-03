@@ -88,6 +88,7 @@ export function useChunkedUpload() {
           }
         })
 
+        console.log(`✓ Chunk ${chunkNumber} uploaded`)
         const uploadedChunks = res.data.uploadedChunks || []
         
         setUploads(prev => ({
@@ -170,12 +171,15 @@ export function useChunkedUpload() {
       let lastReportedProgress = 1
 
       const reportProgress = () => {
-        const newProgress = Math.min(95, Math.round((completedChunks / totalChunks) * 95))
-        if (newProgress > lastReportedProgress) {
-          lastReportedProgress = newProgress
+        // Calculate progress: completed chunks / total chunks * 95 (save last 5% for finalization)
+        const progress = Math.min(95, Math.round((completedChunks / totalChunks) * 95))
+        
+        // Only report if progress increased to avoid duplicate callbacks
+        if (progress > lastReportedProgress) {
+          lastReportedProgress = progress
+          console.log(`✓ Chunk done: ${completedChunks}/${totalChunks} → ${progress}%`)
           if (onProgress) {
-            console.log(`Upload progress: ${newProgress}% (${completedChunks}/${totalChunks} chunks)`)
-            onProgress(newProgress)
+            onProgress(progress)
           }
         }
       }
@@ -204,7 +208,7 @@ export function useChunkedUpload() {
         uploadId,
         fileHash: null
       }, {
-        timeout: 0
+        timeout: 1800000 // 30 minutes timeout for finalization
       })
 
       if (onProgress) onProgress(100)

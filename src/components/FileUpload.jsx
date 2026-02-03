@@ -59,7 +59,6 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
     setTimeRemaining(null)
 
     const startTime = Date.now()
-    let lastUpdateTime = startTime
     let lastProgress = 0
 
     try {
@@ -67,16 +66,18 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
         selectedFile, 
         recipientId, 
         (progress) => {
-          console.log('Progress callback received:', progress)
           // Ensure progress never decreases
           const safeProgress = Math.max(lastProgress, Math.round(progress))
+          lastProgress = safeProgress
+          
+          // Force state update with current progress
           setUploadProgress(safeProgress)
           
           const now = Date.now()
           const elapsedTime = (now - startTime) / 1000
           
-          // Calculate speed and time remaining
-          if (safeProgress > 0 && elapsedTime > 0) {
+          // Calculate speed
+          if (safeProgress > 0 && elapsedTime > 1) {
             const bytesUploaded = (safeProgress / 100) * selectedFile.size
             const speed = bytesUploaded / elapsedTime
             setUploadSpeed(speed)
@@ -86,12 +87,8 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
               const bytesRemaining = selectedFile.size - bytesUploaded
               const timeLeft = bytesRemaining / speed
               setTimeRemaining(timeLeft)
-            } else {
-              setTimeRemaining(0)
             }
           }
-          
-          lastProgress = safeProgress
         },
         (uploadId) => {
           setCurrentUploadId(uploadId)
@@ -99,6 +96,10 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
       )
 
       if (uploadResult.success) {
+        const endTime = Date.now()
+        const totalTime = (endTime - startTime) / 1000
+        const avgSpeed = selectedFile.size / totalTime
+        
         setUploadProgress(100)
         setTimeRemaining(0)
 
@@ -116,19 +117,19 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
         setTimeout(() => {
           setUploadProgress(0)
           setUploadSpeed(0)
+          setUploadStarted(false)
         }, 2000)
       }
     } catch (error) {
       const errorMsg = error.message || 'Upload failed'
       if (errorMsg.includes('cancelled') || errorMsg.includes('canceled')) {
-        setUploadError(null) // Don't show error for user-initiated cancellation
+        setUploadError(null)
       } else {
         setUploadError(errorMsg)
       }
     } finally {
       setIsUploading(false)
       setCurrentUploadId(null)
-      setUploadStarted(false)
     }
   }
 
@@ -178,22 +179,31 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
       {(isUploading || uploadStarted) && (
         <div className="mb-4">
           <div className="flex justify-between mb-2">
-            <span className="text-sm font-medium text-blue-600">Uploading...</span>
-            <span className="text-sm font-medium text-blue-600">{uploadProgress}%</span>
+            <span className="text-sm font-bold text-blue-700">📤 Uploading...</span>
+            <span className="text-sm font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded">{uploadProgress}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+          <div className="w-full bg-gray-300 rounded-full h-4 overflow-hidden shadow-md">
             <div
-              className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+              className="bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 h-4 rounded-full transition-all duration-300 ease-out shadow-lg"
               style={{ width: `${uploadProgress}%` }}
-            ></div>
-          </div>
-          {uploadSpeed > 0 && (
-            <div className="flex justify-between text-xs text-gray-600 mt-2">
-              <span>Speed: {formatSpeed(uploadSpeed)}</span>
-              {timeRemaining !== null && timeRemaining > 0 && (
-                <span>Time remaining: {formatTime(timeRemaining)}</span>
+            >
+              {uploadProgress > 5 && (
+                <div className="h-full flex items-center justify-end pr-2">
+                  <span className="text-xs font-bold text-white drop-shadow-md"></span>
+                </div>
               )}
             </div>
+          </div>
+          {uploadSpeed > 0 && (
+            <div className="flex justify-between text-xs text-gray-700 mt-2 font-medium">
+              <span>🚀 Speed: {formatSpeed(uploadSpeed)}</span>
+              {timeRemaining !== null && timeRemaining > 0 && (
+                <span>⏱️ Time left: {formatTime(timeRemaining)}</span>
+              )}
+            </div>
+          )}
+          {uploadSpeed === 0 && uploadProgress > 0 && (
+            <div className="text-xs text-gray-600 mt-2 font-medium animate-pulse">⏳ Initializing upload...</div>
           )}
         </div>
       )}
