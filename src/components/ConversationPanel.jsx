@@ -2,6 +2,9 @@ import React, { useEffect, useState, useRef } from 'react'
 import api from '../api/axios'
 import FileCard from './FileCard'
 import { useChunkedUpload } from '../hooks/useChunkedUpload'
+import { useFileEncryption } from '../hooks/useFileEncryption'
+import { useFileDecryption } from '../hooks/useFileDecryption'
+import { useAuth } from '../context/AuthContext'
 
 export default function ConversationPanel({ userId, userObj, showNotification }){
   const [files, setFiles] = useState([])
@@ -13,8 +16,12 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const [msg, setMsg] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [currentUploadId, setCurrentUploadId] = useState(null)
+  const [isEncrypting, setIsEncrypting] = useState(false)
   const mounted = useRef(true)
   const { uploadFile, cancelUpload } = useChunkedUpload()
+  const { encryptFileForUpload, getReceiverPublicKey } = useFileEncryption()
+  const { downloadAndDecrypt } = useFileDecryption()
+  const { user } = useAuth()
 
   useEffect(()=>{
     mounted.current = true
@@ -52,9 +59,25 @@ export default function ConversationPanel({ userId, userObj, showNotification })
     let lastUpdateTime = startTime
     
     try{
-      // Pass progress callback to update progress bar in real-time
+      // Step 1: Get receiver's public key
+      setMsg('🔐 Fetching encryption key...')
+      setIsEncrypting(true)
+      const receiverPublicKey = await getReceiverPublicKey(userId)
+      
+      if (!receiverPublicKey) {
+        throw new Error('Receiver has not set up encryption keys. Please ask them to register again.')
+      }
+
+      // Step 2: Encrypt file
+      setMsg('🔐 Encrypting file...')
+      const { encryptedFile, encryptedAesKey, iv, fileHash } = await encryptFileForUpload(fileInput, receiverPublicKey)
+      setIsEncrypting(false)
+      
+      setMsg('📤 Uploading encrypted file...')
+      
+      // Step 3: Upload encrypted file
       const result = await uploadFile(
-        fileInput,
+        encryptedFile,
         userId,
         (progress) => {
           const safeProgress = Math.max(0, Math.min(100, Math.round(progress)))
@@ -66,7 +89,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
 
           // Update speed every 500ms to avoid too frequent updates
           if (elapsed > 0.5 && (now - lastUpdateTime) >= 500) {
-            const bytesUploaded = (safeProgress / 100) * fileInput.size
+            const bytesUploaded = (safeProgress / 100) * encryptedFile.size
             const speed = bytesUploaded / elapsed
             setUploadSpeed(speed)
             lastUpdateTime = now
@@ -74,7 +97,8 @@ export default function ConversationPanel({ userId, userObj, showNotification })
         },
         (uploadId) => {
           setCurrentUploadId(uploadId)
-        }
+        },
+        { encryptedAesKey, iv, fileHash } // Encryption metadata
       )
       
       setMsg('File sent successfully!')
@@ -130,23 +154,27 @@ export default function ConversationPanel({ userId, userObj, showNotification })
     try{
       showNotification && showNotification('Starting download...', 'info')
 
-      const token = localStorage.getItem('token')
-      if (!token) {
-        throw new Error('Not authenticated')
-      }
+      // Download and decrypt file
+      const decryptedBlob = await downloadAndDecrypt(fileId, user?.id, fileMeta)
 
-      const downloadUrl = `${api.defaults.baseURL}/files/download/${fileId}?token=${encodeURIComponent(token)}`
-
+      // Trigger download
+      const url = window.URL.createObjectURL(decryptedBlob)
       const link = document.createElement('a')
-      link.href = downloadUrl
+      link.href = url
       link.download = fileMeta?.originalFileName || 'file'
       link.style.display = 'none'
 
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+      
+      // Clean up blob URL
+      window.URL.revokeObjectURL(url)
 
-      showNotification && showNotification('Download started', 'success')
+      showNotification && showNotification(
+        fileMeta.isEncrypted ? '🔓 File decrypted and downloaded' : 'Download complete', 
+        'success'
+      )
     }catch(err){
       const errorMsg = err?.message || 'Download failed'
       showNotification && showNotification(errorMsg, 'error')
@@ -162,7 +190,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
             <div className="font-semibold">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
             <div className="text-xs text-gray-500">Share files securely</div>
           </div>
-          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v2.7.0</div>
+          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v3.0.0 🔐 E2EE</div>
         </div>
       </div>
 
@@ -186,7 +214,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       <div className="mt-2 border-t pt-2 sticky bottom-0 bg-white z-10 shadow-md">
         <form className="flex items-center gap-2 py-2" onSubmit={submit}>
           <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded cursor-pointer hover:bg-gray-50">
-            <input type="file" className="hidden" onChange={e=>setFileInput(e.target.files[0])} disabled={isUploading} />
+            <input type="file" className="hidden" onChange={e=>setFileInput(e.target.files[0])} disabled={isUploading || isEncrypting} />
             <span>📎 Attach</span>
           </label>
           <div className="flex-1">
@@ -217,14 +245,14 @@ export default function ConversationPanel({ userId, userObj, showNotification })
           <div className="flex gap-2">
             <button 
               className={`px-4 py-2 rounded font-medium transition-colors ${
-                isUploading 
+                isUploading || isEncrypting
                   ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
                   : 'bg-sky-500 text-white hover:bg-sky-600'
               }`}
               type="submit" 
-              disabled={isUploading}
+              disabled={isUploading || isEncrypting}
             >
-              {isUploading ? `Uploading... ${uploadProgress}%` : 'Send'}
+              {isEncrypting ? '🔐 Encrypting...' : isUploading ? `📤 ${uploadProgress}%` : '🔒 Send Encrypted'}
             </button>
             {isUploading && currentUploadId && (
               <button
