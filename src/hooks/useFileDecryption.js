@@ -51,7 +51,9 @@ export function useFileDecryption() {
 
       // Step 5: Verify integrity
       if (fileMeta.fileHash) {
-        const calculatedHash = await calculateFileHash(decryptedBlob)
+        // Read blob once to prevent read errors
+        const decryptedBuffer = await decryptedBlob.arrayBuffer()
+        const calculatedHash = await calculateFileHash(decryptedBuffer)
         
         if (calculatedHash !== fileMeta.fileHash) {
           throw new Error('File integrity check failed! File may be corrupted or tampered.')

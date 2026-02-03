@@ -22,14 +22,17 @@ export function useFileEncryption() {
    */
   const encryptFileForUpload = useCallback(async (file, receiverPublicKey) => {
     try {
+      // Step 0: Read file once to prevent NotReadableError
+      const fileBuffer = await file.arrayBuffer()
+
       // Step 1: Generate random AES key
       const aesKey = await generateAESKey()
 
       // Step 2: Calculate SHA-256 hash of original file (for integrity)
-      const fileHash = await calculateFileHash(file)
+      const fileHash = await calculateFileHash(fileBuffer)
 
-      // Step 3: Encrypt file with AES
-      const { encryptedData, iv } = await encryptFile(file, aesKey)
+      // Step 3: Encrypt file with AES (reuse buffer instead of re-reading file)
+      const { encryptedData, iv } = await encryptFile(fileBuffer, aesKey)
 
       // Step 4: Encrypt AES key with receiver's RSA public key
       const encryptedAesKey = await encryptAESKey(aesKey, receiverPublicKey)

@@ -56,8 +56,8 @@ export async function generateAESKey() {
   }
 }
 
-// Encrypt file with AES-GCM
-export async function encryptFile(file, aesKeyBase64) {
+// Encrypt file with AES-GCM (accepts File or pre-read buffer)
+export async function encryptFile(fileOrBuffer, aesKeyBase64) {
   try {
     // Import AES key
     const keyBuffer = base64ToArrayBuffer(aesKeyBase64)
@@ -72,8 +72,10 @@ export async function encryptFile(file, aesKeyBase64) {
     // Generate random IV (12 bytes for GCM)
     const iv = window.crypto.getRandomValues(new Uint8Array(12))
 
-    // Read file as ArrayBuffer
-    const fileBuffer = await file.arrayBuffer()
+    // Read file as ArrayBuffer if not already a buffer
+    const fileBuffer = fileOrBuffer instanceof ArrayBuffer 
+      ? fileOrBuffer 
+      : await fileOrBuffer.arrayBuffer()
 
     // Encrypt
     const encryptedBuffer = await window.crypto.subtle.encrypt(
@@ -181,10 +183,27 @@ export async function decryptAESKey(encryptedKeyBase64, privateKeyPEM) {
   }
 }
 
-// Calculate SHA-256 hash of file
-export async function calculateFileHash(file) {
+// Calculate SHA-256 hash of file (accepts File or ArrayBuffer)
+export async function calculateFileHash(fileOrBuffer) {
   try {
-    const buffer = await file.arrayBuffer()
+    // Handle both File and ArrayBuffer
+    const buffer = fileOrBuffer instanceof ArrayBuffer 
+      ? fileOrBuffer 
+      : await fileOrBuffer.arrayBuffer()
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', buffer)
+    return arrayBufferToHex(hashBuffer)
+  } catch (error) {
+    console.error('Hash calculation failed:', error)
+    throw new Error('Failed to calculate file hash')
+  }
+}
+
+// Calculate SHA-256 hash from pre-read ArrayBuffer (optimized)
+export async function calculateFileHashFromBuffer(buffer) {
+  try {
+    if (!(buffer instanceof ArrayBuffer)) {
+      throw new TypeError('Expected ArrayBuffer')
+    }
     const hashBuffer = await window.crypto.subtle.digest('SHA-256', buffer)
     return arrayBufferToHex(hashBuffer)
   } catch (error) {
