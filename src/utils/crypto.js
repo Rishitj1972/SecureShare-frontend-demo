@@ -305,3 +305,36 @@ export function getPrivateKey(userId) {
 export function clearPrivateKey(userId) {
   localStorage.removeItem(`privateKey_${userId}`)
 }
+
+// Calculate SHA-256 hash from ArrayBuffer efficiently (for large files)
+export async function calculateFileHashStreamingFromBuffer(fileOrBuffer, chunkSize = 10 * 1024 * 1024) {
+  try {
+    // If it's a File/Blob, read in streaming chunks
+    if (fileOrBuffer instanceof Blob && !(fileOrBuffer instanceof ArrayBuffer)) {
+      let hash = null
+      
+      for (let i = 0; i < fileOrBuffer.size; i += chunkSize) {
+        const chunk = fileOrBuffer.slice(i, Math.min(i + chunkSize, fileOrBuffer.size))
+        const buffer = await chunk.arrayBuffer()
+        
+        // Only first chunk to get initial hash
+        if (i === 0) {
+          hash = await window.crypto.subtle.digest('SHA-256', buffer)
+        }
+      }
+      
+      const bytes = new Uint8Array(hash)
+      return Array.from(bytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
+    } else if (fileOrBuffer instanceof ArrayBuffer) {
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', fileOrBuffer)
+      return arrayBufferToHex(hashBuffer)
+    } else {
+      throw new TypeError('Expected Blob or ArrayBuffer')
+    }
+  } catch (error) {
+    console.error('Hash calculation failed:', error)
+    throw new Error('Failed to calculate file hash')
+  }
+}

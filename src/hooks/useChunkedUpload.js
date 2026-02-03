@@ -140,16 +140,17 @@ export function useChunkedUpload() {
 
     const pickSettings = (level) => {
       if (level === 0) {
-        // Reduced chunk sizes for stable uploads through slow networks (Cloudflare tunnel)
-        if (fileSizeInMB < 50) return { chunkSize: 2 * 1024 * 1024, parallel: 2 }; // 2MB chunks
-        if (fileSizeInMB < 200) return { chunkSize: 5 * 1024 * 1024, parallel: 2 }; // 5MB chunks
-        if (fileSizeInMB < 500) return { chunkSize: 10 * 1024 * 1024, parallel: 2 }; // 10MB chunks
-        return { chunkSize: 15 * 1024 * 1024, parallel: 2 }; // 15MB chunks for large files
+        // Level 0: Optimized for stable networks and large files
+        // Larger chunks = fewer total uploads = faster for large files
+        if (fileSizeInMB < 100) return { chunkSize: 10 * 1024 * 1024, parallel: 2 }; // 10MB chunks
+        if (fileSizeInMB < 500) return { chunkSize: 25 * 1024 * 1024, parallel: 2 }; // 25MB chunks
+        if (fileSizeInMB < 2000) return { chunkSize: 50 * 1024 * 1024, parallel: 2 }; // 50MB chunks
+        return { chunkSize: 100 * 1024 * 1024, parallel: 2 }; // 100MB chunks for 5GB+ files (only 50 chunks for 5GB)
       }
       if (level === 1) {
-        return { chunkSize: 5 * 1024 * 1024, parallel: 1 }; // 5MB, single parallel
+        return { chunkSize: 25 * 1024 * 1024, parallel: 1 }; // 25MB, single parallel
       }
-      return { chunkSize: 2 * 1024 * 1024, parallel: 1 }; // 2MB, single parallel
+      return { chunkSize: 10 * 1024 * 1024, parallel: 1 }; // 10MB, single parallel
     };
 
     const runUpload = async ({ chunkSize: preferredChunkSize, parallel }) => {

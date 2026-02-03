@@ -17,6 +17,9 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const [isUploading, setIsUploading] = useState(false)
   const [currentUploadId, setCurrentUploadId] = useState(null)
   const [isEncrypting, setIsEncrypting] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState(0)
+  const [downloadStage, setDownloadStage] = useState('')
+  const [isDownloading, setIsDownloading] = useState(false)
   const mounted = useRef(true)
   const { uploadFile, cancelUpload } = useChunkedUpload()
   const { encryptFileForUpload, getReceiverPublicKey } = useFileEncryption()
@@ -152,10 +155,30 @@ export default function ConversationPanel({ userId, userObj, showNotification })
 
   const onDownload = async (fileId, fileMeta) => {
     try{
+      setIsDownloading(true)
+      setDownloadProgress(0)
+      setDownloadStage('starting')
       showNotification && showNotification('Starting download...', 'info')
 
-      // Download and decrypt file
-      const decryptedBlob = await downloadAndDecrypt(fileId, user?.id, fileMeta)
+      // Download and decrypt file with progress tracking
+      const decryptedBlob = await downloadAndDecrypt(
+        fileId, 
+        user?.id, 
+        fileMeta,
+        (progress, stage) => {
+          setDownloadProgress(progress)
+          setDownloadStage(stage)
+          
+          // Update notification based on stage
+          if (stage === 'downloading' && progress % 20 === 0 && progress > 0) {
+            showNotification && showNotification(`Downloading... ${progress}%`, 'info')
+          } else if (stage === 'decrypting' && progress === 40) {
+            showNotification && showNotification('Decrypting file...', 'info')
+          } else if (stage === 'verifying' && progress === 90) {
+            showNotification && showNotification('Verifying integrity...', 'info')
+          }
+        }
+      )
 
       // Trigger download
       const url = window.URL.createObjectURL(decryptedBlob)
@@ -179,6 +202,10 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       const errorMsg = err?.message || 'Download failed'
       showNotification && showNotification(errorMsg, 'error')
       console.error('Download error:', err)
+    } finally {
+      setIsDownloading(false)
+      setDownloadProgress(0)
+      setDownloadStage('')
     }
   }
 
@@ -196,6 +223,29 @@ export default function ConversationPanel({ userId, userObj, showNotification })
 
       <div className="flex-1 overflow-auto space-y-3 mb-3">
         {loading && <div className="text-sm text-gray-500">Loading files...</div>}
+        
+        {/* Download Progress Indicator */}
+        {isDownloading && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-semibold text-blue-900">
+                {downloadStage === 'downloading' && `📥 Downloading... ${downloadProgress}%`}
+                {downloadStage === 'decrypting' && `🔓 Decrypting... ${downloadProgress}%`}
+                {downloadStage === 'verifying' && `✓ Verifying integrity... ${downloadProgress}%`}
+                {downloadStage === 'complete' && `✅ Complete!`}
+                {downloadStage === 'starting' && `⏳ Preparing download...`}
+              </div>
+              <div className="text-xs text-blue-600">{downloadProgress}%</div>
+            </div>
+            <div className="w-full bg-blue-200 h-2.5 rounded-full overflow-hidden">
+              <div 
+                style={{width: `${downloadProgress}%`}} 
+                className="h-2.5 bg-blue-600 rounded-full transition-all duration-300"
+              />
+            </div>
+          </div>
+        )}
+        
         {files.map(f => (
           <FileCard key={f._id} file={f} onDownload={() => onDownload(f._id, f)} onDelete={async (id) => {
             if (!window.confirm('Delete this file? This cannot be undone.')) return
