@@ -125,7 +125,7 @@ export function useChunkedUpload() {
     throw lastError
   }, [calculateChunkHash, sleep])
 
-  const uploadFile = useCallback(async (file, receiverId, onProgress) => {
+  const uploadFile = useCallback(async (file, receiverId, onProgress, onUploadIdReady) => {
     const fileSizeInMB = file.size / (1024 * 1024);
 
     const pickSettings = (level) => {
@@ -146,6 +146,11 @@ export function useChunkedUpload() {
 
       // Create AbortController for this upload
       abortControllers.current[uploadId] = new AbortController()
+
+      // Notify caller that uploadId is ready
+      if (onUploadIdReady) {
+        onUploadIdReady(uploadId)
+      }
 
       if (onProgress) onProgress(1)
 

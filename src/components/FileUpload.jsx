@@ -60,11 +60,16 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
     try {
       // Note: In production, you'd want to update progress in real-time
       // For now, we'll do a simple progress tracking
-      const uploadResult = await uploadFile(selectedFile, recipientId, (progress) => {
-        setUploadProgress(progress)
-      })
-
-      setCurrentUploadId(uploadResult.uploadId)
+      const uploadResult = await uploadFile(
+        selectedFile, 
+        recipientId, 
+        (progress) => {
+          setUploadProgress(progress)
+        },
+        (uploadId) => {
+          setCurrentUploadId(uploadId)
+        }
+      )
 
       if (uploadResult.success) {
         const endTime = Date.now()
