@@ -48,7 +48,7 @@ export function useChunkedUpload() {
   }, [])
 
   const uploadChunk = useCallback(async (uploadId, chunkNumber, chunkData, totalChunks, onChunkProgress) => {
-    const maxRetries = 2
+    const maxRetries = 3
     let lastError = null
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -75,9 +75,11 @@ export function useChunkedUpload() {
           formData.append('chunkHash', chunkHash)
         }
 
+        console.log(`Uploading chunk ${chunkNumber}/${totalChunks} (attempt ${attempt + 1}/${maxRetries + 1})`)
+
         const res = await api.post('/files/chunked/upload-chunk', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: 0,
+          timeout: 1800000, // 30 minutes timeout for each chunk
           signal: abortControllers.current[uploadId]?.signal,
           onUploadProgress: (event) => {
             if (!onChunkProgress || !event.total) return
@@ -98,19 +100,28 @@ export function useChunkedUpload() {
           }
         }))
 
+        console.log(`Chunk ${chunkNumber} uploaded successfully`)
         return res.data
       } catch (error) {
         lastError = error
         
         // Check if upload was cancelled
         if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+          console.log(`Chunk ${chunkNumber} upload cancelled`)
           throw error // Don't retry if cancelled
         }
         
-        if (attempt < maxRetries) {
-          await sleep(500 * Math.pow(2, attempt))
+        const isTimeout = error.message.includes('timeout') || 
+                         error.message.includes('context canceled') ||
+                         error.code === 'ECONNABORTED'
+        
+        if (attempt < maxRetries && isTimeout) {
+          const waitTime = 1000 * Math.pow(2, attempt) // Exponential backoff: 1s, 2s, 4s
+          console.log(`Chunk ${chunkNumber} timeout/error, retrying in ${waitTime}ms...`, error.message)
+          await sleep(waitTime)
           continue
         }
+        
         setUploads(prev => ({
           ...prev,
           [uploadId]: {
@@ -130,15 +141,16 @@ export function useChunkedUpload() {
 
     const pickSettings = (level) => {
       if (level === 0) {
-        if (fileSizeInMB < 50) return { chunkSize: 5 * 1024 * 1024, parallel: 2 };
-        if (fileSizeInMB < 200) return { chunkSize: 10 * 1024 * 1024, parallel: 3 };
-        if (fileSizeInMB < 500) return { chunkSize: 25 * 1024 * 1024, parallel: 3 };
-        return { chunkSize: 32 * 1024 * 1024, parallel: 3 };
+        // Reduced chunk sizes for stable uploads through slow networks (Cloudflare tunnel)
+        if (fileSizeInMB < 50) return { chunkSize: 2 * 1024 * 1024, parallel: 2 }; // 2MB chunks
+        if (fileSizeInMB < 200) return { chunkSize: 5 * 1024 * 1024, parallel: 2 }; // 5MB chunks
+        if (fileSizeInMB < 500) return { chunkSize: 10 * 1024 * 1024, parallel: 2 }; // 10MB chunks
+        return { chunkSize: 15 * 1024 * 1024, parallel: 2 }; // 15MB chunks for large files
       }
       if (level === 1) {
-        return { chunkSize: 10 * 1024 * 1024, parallel: 2 };
+        return { chunkSize: 5 * 1024 * 1024, parallel: 1 }; // 5MB, single parallel
       }
-      return { chunkSize: 5 * 1024 * 1024, parallel: 2 };
+      return { chunkSize: 2 * 1024 * 1024, parallel: 1 }; // 2MB, single parallel
     };
 
     const runUpload = async ({ chunkSize: preferredChunkSize, parallel }) => {
