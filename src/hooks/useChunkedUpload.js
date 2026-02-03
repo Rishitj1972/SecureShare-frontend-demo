@@ -169,15 +169,22 @@ export function useChunkedUpload() {
 
       let completedChunks = 0
       let lastReportedProgress = 1
+      const chunkSizes = {}
+      const inFlightProgress = {}
 
-      const reportProgress = () => {
-        // Calculate progress: completed chunks / total chunks * 95 (save last 5% for finalization)
-        const progress = Math.min(95, Math.round((completedChunks / totalChunks) * 95))
-        
-        // Only report if progress increased to avoid duplicate callbacks
+      const reportProgressFromBytes = () => {
+        const totalBytes = file.size
+        let uploadedBytes = 0
+
+        Object.keys(chunkSizes).forEach((key) => {
+          const size = chunkSizes[key]
+          const percent = inFlightProgress[key] ?? 0
+          uploadedBytes += (percent / 100) * size
+        })
+
+        const progress = Math.min(95, Math.max(1, Math.round((uploadedBytes / totalBytes) * 95)))
         if (progress > lastReportedProgress) {
           lastReportedProgress = progress
-          console.log(`✓ Chunk done: ${completedChunks}/${totalChunks} → ${progress}%`)
           if (onProgress) {
             onProgress(progress)
           }
@@ -192,11 +199,18 @@ export function useChunkedUpload() {
           const end = Math.min(start + chunkSize, file.size)
           const chunk = file.slice(start, end)
 
+          chunkSizes[chunkNum] = chunk.size
+          inFlightProgress[chunkNum] = 0
+
           batch.push(
-            uploadChunk(uploadId, chunkNum, chunk, totalChunks, null)
+            uploadChunk(uploadId, chunkNum, chunk, totalChunks, (percent) => {
+              inFlightProgress[chunkNum] = percent
+              reportProgressFromBytes()
+            })
               .then(() => {
                 completedChunks++
-                reportProgress()
+                inFlightProgress[chunkNum] = 100
+                reportProgressFromBytes()
               })
           )
         }

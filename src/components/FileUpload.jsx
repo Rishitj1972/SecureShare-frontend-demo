@@ -141,6 +141,11 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
         setUploadProgress(0)
         setUploadSpeed(0)
         setTimeRemaining(null)
+        setIsUploading(false)
+        setUploadStarted(false)
+        setCurrentUploadId(null)
+        setSelectedFile(null)
+        if (fileInputRef.current) fileInputRef.current.value = ''
       } catch (error) {
         console.error('Error cancelling upload:', error)
       }
