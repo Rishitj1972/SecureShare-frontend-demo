@@ -9,7 +9,8 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadSpeed, setUploadSpeed] = useState(0)
   const [timeRemaining, setTimeRemaining] = useState(null)
-  const { uploadFile } = useChunkedUpload()
+  const [currentUploadId, setCurrentUploadId] = useState(null)
+  const { uploadFile, cancelUpload } = useChunkedUpload()
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0]
@@ -59,7 +60,11 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
     try {
       // Note: In production, you'd want to update progress in real-time
       // For now, we'll do a simple progress tracking
-      const uploadResult = await uploadFile(selectedFile, recipientId)
+      const uploadResult = await uploadFile(selectedFile, recipientId, (progress) => {
+        setUploadProgress(progress)
+      })
+
+      setCurrentUploadId(uploadResult.uploadId)
 
       if (uploadResult.success) {
         const endTime = Date.now()
@@ -87,9 +92,29 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
         }, 2000)
       }
     } catch (error) {
-      setUploadError(error.message || 'Upload failed')
+      const errorMsg = error.message || 'Upload failed'
+      if (errorMsg.includes('cancelled') || errorMsg.includes('canceled')) {
+        setUploadError(null) // Don't show error for user-initiated cancellation
+      } else {
+        setUploadError(errorMsg)
+      }
     } finally {
       setIsUploading(false)
+      setCurrentUploadId(null)
+    }
+  }
+
+  const handleCancel = async () => {
+    if (currentUploadId) {
+      try {
+        await cancelUpload(currentUploadId)
+        setUploadError(null)
+        setUploadProgress(0)
+        setUploadSpeed(0)
+        setTimeRemaining(null)
+      } catch (error) {
+        console.error('Error cancelling upload:', error)
+      }
     }
   }
 
@@ -149,13 +174,23 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
         </div>
       )}
 
-      <button
-        onClick={handleUpload}
-        disabled={!selectedFile || isUploading}
-        className="w-full btn disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isUploading ? 'Uploading...' : 'Upload File'}
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={handleUpload}
+          disabled={!selectedFile || isUploading}
+          className="flex-1 btn disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isUploading ? 'Uploading...' : 'Upload File'}
+        </button>
+        {isUploading && (
+          <button
+            onClick={handleCancel}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   )
 }

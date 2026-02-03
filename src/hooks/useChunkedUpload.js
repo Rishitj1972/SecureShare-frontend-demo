@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import api from '../api/axios'
 import CryptoJS from 'crypto-js'
 
 export function useChunkedUpload() {
   const [uploads, setUploads] = useState({}) // uploadId -> upload state
+  const abortControllers = useRef({}) // uploadId -> AbortController
 
   const sleep = useCallback((ms) => new Promise((resolve) => setTimeout(resolve, ms)), [])
 
@@ -77,6 +78,7 @@ export function useChunkedUpload() {
         const res = await api.post('/files/chunked/upload-chunk', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
           timeout: 0,
+          signal: abortControllers.current[uploadId]?.signal,
           onUploadProgress: (event) => {
             if (!onChunkProgress || !event.total) return
             const percent = Math.min(100, Math.round((event.loaded / event.total) * 100))
@@ -99,6 +101,12 @@ export function useChunkedUpload() {
         return res.data
       } catch (error) {
         lastError = error
+        
+        // Check if upload was cancelled
+        if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+          throw error // Don't retry if cancelled
+        }
+        
         if (attempt < maxRetries) {
           await sleep(500 * Math.pow(2, attempt))
           continue
@@ -135,6 +143,9 @@ export function useChunkedUpload() {
 
     const runUpload = async ({ chunkSize: preferredChunkSize, parallel }) => {
       const { uploadId, chunkSize, totalChunks } = await initUpload(file, receiverId, preferredChunkSize)
+
+      // Create AbortController for this upload
+      abortControllers.current[uploadId] = new AbortController()
 
       if (onProgress) onProgress(1)
 
@@ -188,12 +199,20 @@ export function useChunkedUpload() {
         }
       }))
 
+      // Clean up AbortController
+      delete abortControllers.current[uploadId]
+
       return { success: true, fileId: completeRes.data.fileId, uploadId }
     };
 
     try {
       return await runUpload(pickSettings(0))
     } catch (error) {
+      // Check if upload was cancelled
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        throw new Error('Upload cancelled')
+      }
+      
       const status = error?.response?.status
       const msg = error?.message || ''
       const isTimeout = msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('network')
@@ -220,14 +239,36 @@ export function useChunkedUpload() {
 
   const cancelUpload = useCallback(async (uploadId) => {
     try {
+      // Abort ongoing requests
+      if (abortControllers.current[uploadId]) {
+        abortControllers.current[uploadId].abort()
+        delete abortControllers.current[uploadId]
+      }
+
+      // Update local state immediately
+      setUploads(prev => ({
+        ...prev,
+        [uploadId]: {
+          ...prev[uploadId],
+          status: 'cancelled',
+          error: 'Upload cancelled by user'
+        }
+      }))
+
+      // Notify backend to cleanup
       await api.delete(`/files/chunked/${uploadId}`)
-      setUploads(prev => {
-        const updated = { ...prev }
-        delete updated[uploadId]
-        return updated
-      })
+
+      // Remove from state after backend confirms
+      setTimeout(() => {
+        setUploads(prev => {
+          const updated = { ...prev }
+          delete updated[uploadId]
+          return updated
+        })
+      }, 1000)
     } catch (error) {
-      throw error
+      // Even if backend call fails, local cancellation succeeded
+      console.error('Error cancelling upload on server:', error)
     }
   }, [])
 
