@@ -7,11 +7,14 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadSpeed, setUploadSpeed] = useState(0)
+  const [elapsedTime, setElapsedTime] = useState(0)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const [isUploading, setIsUploading] = useState(false)
+  const [currentUploadId, setCurrentUploadId] = useState(null)
   const mounted = useRef(true)
-  const { uploadFile } = useChunkedUpload()
+  const { uploadFile, cancelUpload } = useChunkedUpload()
 
   useEffect(()=>{
     mounted.current = true
@@ -41,13 +44,33 @@ export default function ConversationPanel({ userId, userObj, showNotification })
     
     setIsUploading(true)
     setUploadProgress(0)
+    setUploadSpeed(0)
+    setElapsedTime(0)
+    setCurrentUploadId(null)
     setMsg('')
+    const startTime = Date.now()
     
     try{
       // Pass progress callback to update progress bar in real-time
-      const result = await uploadFile(fileInput, userId, (progress) => {
-        setUploadProgress(progress)
-      })
+      const result = await uploadFile(
+        fileInput,
+        userId,
+        (progress) => {
+          setUploadProgress(prev => Math.max(prev, Math.round(progress)))
+          const now = Date.now()
+          const elapsed = (now - startTime) / 1000
+          setElapsedTime(elapsed)
+
+          if (elapsed > 0) {
+            const bytesUploaded = (progress / 100) * fileInput.size
+            const speed = bytesUploaded / elapsed
+            setUploadSpeed(speed)
+          }
+        },
+        (uploadId) => {
+          setCurrentUploadId(uploadId)
+        }
+      )
       
       setMsg('File sent successfully!')
       showNotification && showNotification('File sent', 'success')
@@ -60,6 +83,8 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       // Reset progress bar after a short delay
       setTimeout(() => {
         setUploadProgress(0)
+        setUploadSpeed(0)
+        setElapsedTime(0)
         setMsg('')
       }, 2000)
     }catch(err){
@@ -68,6 +93,24 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       showNotification && showNotification(errorMsg, 'error')
     }finally{
       setIsUploading(false)
+      setCurrentUploadId(null)
+    }
+  }
+
+  const handleCancel = async () => {
+    if (!currentUploadId) return
+    try {
+      await cancelUpload(currentUploadId)
+      setIsUploading(false)
+      setUploadProgress(0)
+      setUploadSpeed(0)
+      setElapsedTime(0)
+      setCurrentUploadId(null)
+      setFileInput(null)
+      setMsg('Upload cancelled')
+    } catch (err) {
+      const errorMsg = err?.response?.data?.message || err?.message || 'Cancel failed'
+      setMsg(errorMsg)
     }
   }
 
@@ -144,21 +187,38 @@ export default function ConversationPanel({ userId, userObj, showNotification })
                 />
               </div>
             )}
+            {uploadProgress > 0 && (
+              <div className="flex justify-between text-xs text-gray-600 mt-1">
+                <span>Speed: {uploadSpeed > 0 ? `${(uploadSpeed / (1024 * 1024)).toFixed(2)} MB/s` : 'Calculating...'}</span>
+                <span>Elapsed: {elapsedTime > 0 ? `${Math.round(elapsedTime)}s` : '0s'}</span>
+              </div>
+            )}
             {uploadProgress === 100 && isUploading && (
               <div className="text-xs text-gray-500 mt-1">Finalizing upload...</div>
             )}
           </div>
-          <button 
-            className={`px-4 py-2 rounded font-medium transition-colors ${
-              isUploading 
-                ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
-                : 'bg-sky-500 text-white hover:bg-sky-600'
-            }`}
-            type="submit" 
-            disabled={isUploading}
-          >
-            {isUploading ? `Uploading... ${uploadProgress}%` : 'Send'}
-          </button>
+          <div className="flex gap-2">
+            <button 
+              className={`px-4 py-2 rounded font-medium transition-colors ${
+                isUploading 
+                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
+                  : 'bg-sky-500 text-white hover:bg-sky-600'
+              }`}
+              type="submit" 
+              disabled={isUploading}
+            >
+              {isUploading ? `Uploading... ${uploadProgress}%` : 'Send'}
+            </button>
+            {isUploading && currentUploadId && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-4 py-2 rounded font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
         {msg && (
           <div className={`mt-2 text-sm px-2 py-1 rounded ${
