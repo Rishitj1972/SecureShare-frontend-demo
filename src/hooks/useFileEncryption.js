@@ -7,6 +7,16 @@ import {
 } from '../utils/crypto'
 import api from '../api/axios'
 
+// Helper function to convert ArrayBuffer to Base64
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
+
 /**
  * Hook for encrypting files before upload
  * Zero-knowledge encryption workflow
@@ -44,8 +54,9 @@ export function useFileEncryption() {
       let iv = null
       let encryptedFile = null
 
-      // Step 3: For small files, encrypt before upload (faster)
+      // Step 3: Encryption strategy based on file size
       if (file.size <= FILE_SIZE_THRESHOLD) {
+        // Small files: Pre-encrypt before upload (E2EE, most secure)
         const fileBuffer = await file.arrayBuffer()
         const result = await encryptFile(fileBuffer, aesKey)
         encryptedData = result.encryptedData
@@ -58,9 +69,12 @@ export function useFileEncryption() {
           { type: file.type }
         )
       } else {
-        // For large files, server will handle encryption
+        // Large files: Skip pre-encryption, but still generate IV for server-side encryption
         encryptedFile = file
-        iv = null // Server will generate IV
+        
+        // Generate IV for server to use during encryption
+        const ivBytes = window.crypto.getRandomValues(new Uint8Array(12))
+        iv = arrayBufferToBase64(ivBytes.buffer)
       }
 
       // Step 4: Encrypt AES key with receiver's RSA public key
