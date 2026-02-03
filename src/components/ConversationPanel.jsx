@@ -49,6 +49,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
     setCurrentUploadId(null)
     setMsg('')
     const startTime = Date.now()
+    let lastUpdateTime = startTime
     
     try{
       // Pass progress callback to update progress bar in real-time
@@ -56,15 +57,19 @@ export default function ConversationPanel({ userId, userObj, showNotification })
         fileInput,
         userId,
         (progress) => {
-          setUploadProgress(prev => Math.max(prev, Math.round(progress)))
+          const safeProgress = Math.max(0, Math.min(100, Math.round(progress)))
+          setUploadProgress(prev => Math.max(prev, safeProgress))
+          
           const now = Date.now()
           const elapsed = (now - startTime) / 1000
-          setElapsedTime(elapsed)
+          setElapsedTime(Math.round(elapsed))
 
-          if (elapsed > 0) {
-            const bytesUploaded = (progress / 100) * fileInput.size
+          // Update speed every 500ms to avoid too frequent updates
+          if (elapsed > 0.5 && (now - lastUpdateTime) >= 500) {
+            const bytesUploaded = (safeProgress / 100) * fileInput.size
             const speed = bytesUploaded / elapsed
             setUploadSpeed(speed)
+            lastUpdateTime = now
           }
         },
         (uploadId) => {
@@ -99,18 +104,26 @@ export default function ConversationPanel({ userId, userObj, showNotification })
 
   const handleCancel = async () => {
     if (!currentUploadId) return
+    
+    // Immediately update UI state
+    setIsUploading(false)
+    setUploadProgress(0)
+    setUploadSpeed(0)
+    setElapsedTime(0)
+    const uploadIdToCancel = currentUploadId
+    setCurrentUploadId(null)
+    setFileInput(null)
+    
     try {
-      await cancelUpload(currentUploadId)
-      setIsUploading(false)
-      setUploadProgress(0)
-      setUploadSpeed(0)
-      setElapsedTime(0)
-      setCurrentUploadId(null)
-      setFileInput(null)
-      setMsg('Upload cancelled')
+      // Cancel upload and cleanup chunks on server
+      await cancelUpload(uploadIdToCancel)
+      setMsg('Upload cancelled - chunks cleared')
+      setTimeout(() => setMsg(''), 3000)
     } catch (err) {
-      const errorMsg = err?.response?.data?.message || err?.message || 'Cancel failed'
-      setMsg(errorMsg)
+      // Even if server cancel fails, UI is already reset
+      console.error('Server cancel error:', err)
+      setMsg('Upload cancelled (local)')
+      setTimeout(() => setMsg(''), 3000)
     }
   }
 
@@ -150,7 +163,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
             <div className="font-semibold">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
             <div className="text-xs text-gray-500">Share files securely</div>
           </div>
-          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v2.5.0</div>
+          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v2.6.0</div>
         </div>
       </div>
 
@@ -194,8 +207,8 @@ export default function ConversationPanel({ userId, userObj, showNotification })
             )}
             {uploadProgress > 0 && (
               <div className="flex justify-between text-xs text-gray-600 mt-1">
-                <span>Speed: {uploadSpeed > 0 ? `${(uploadSpeed / (1024 * 1024)).toFixed(2)} MB/s` : 'Calculating...'}</span>
-                <span>Elapsed: {elapsedTime > 0 ? `${Math.round(elapsedTime)}s` : '0s'}</span>
+                <span>⚡ {uploadSpeed > 0 ? `${(uploadSpeed / (1024 * 1024)).toFixed(1)} MB/s` : 'Starting...'}</span>
+                <span>⏱ {elapsedTime}s</span>
               </div>
             )}
             {uploadProgress === 100 && isUploading && (
