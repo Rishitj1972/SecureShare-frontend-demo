@@ -120,14 +120,26 @@ export default function FileCard({ file, onDownload, onDelete, isSent, currentUs
           
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {!isSent && !isThisFileDownloading && (
-              <button 
-                onClick={() => onDownload(file._id)} 
-                className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-blue-300 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
-              >
-                <ArrowDownTrayIcon className="w-4 h-4" />
-                <span>Download</span>
-              </button>
+            {!isSent && (
+              isThisFileDownloading ? (
+                <div className="flex flex-col items-center gap-1">
+                  <CircularProgress progress={downloadProgress} size={56} strokeWidth={4} />
+                  <div className="text-[10px] text-blue-600 font-medium mt-1">
+                    {downloadStage === 'downloading' && '📥'}
+                    {downloadStage === 'decrypting' && '🔓'}
+                    {downloadStage === 'verifying' && '✓'}
+                    {downloadStage === 'complete' && '✅'}
+                  </div>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => onDownload(file._id)} 
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-blue-300 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                >
+                  <ArrowDownTrayIcon className="w-4 h-4" />
+                  <span>Download</span>
+                </button>
+              )
             )}
             
             <Menu as="div" className="relative">
