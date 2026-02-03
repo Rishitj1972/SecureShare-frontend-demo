@@ -166,15 +166,31 @@ export default function ConversationPanel({ userId, userObj, showNotification })
         user?.id, 
         fileMeta,
         (progress, stage) => {
-          setDownloadProgress(progress)
+          // Map progress to cumulative scale:
+          // Download: 0-60%
+          // Decrypt: 60-90%
+          // Verify: 90-100%
+          let cumulativeProgress = 0
+          
+          if (stage === 'downloading') {
+            cumulativeProgress = Math.round(progress * 0.6) // 0-60%
+          } else if (stage === 'decrypting') {
+            cumulativeProgress = 60 + Math.round(progress * 0.3) // 60-90%
+          } else if (stage === 'verifying') {
+            cumulativeProgress = 90 + Math.round(progress * 0.1) // 90-100%
+          } else if (stage === 'complete') {
+            cumulativeProgress = 100
+          }
+          
+          setDownloadProgress(cumulativeProgress)
           setDownloadStage(stage)
           
           // Update notification based on stage
-          if (stage === 'downloading' && progress % 20 === 0 && progress > 0) {
-            showNotification && showNotification(`Downloading... ${progress}%`, 'info')
-          } else if (stage === 'decrypting' && progress === 40) {
+          if (stage === 'downloading' && cumulativeProgress % 15 === 0 && cumulativeProgress > 0) {
+            showNotification && showNotification(`Downloading... ${cumulativeProgress}%`, 'info')
+          } else if (stage === 'decrypting' && cumulativeProgress === 60) {
             showNotification && showNotification('Decrypting file...', 'info')
-          } else if (stage === 'verifying' && progress === 90) {
+          } else if (stage === 'verifying' && cumulativeProgress === 90) {
             showNotification && showNotification('Verifying integrity...', 'info')
           }
         }
@@ -229,19 +245,25 @@ export default function ConversationPanel({ userId, userObj, showNotification })
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold text-blue-900">
-                {downloadStage === 'downloading' && `📥 Downloading... ${downloadProgress}%`}
-                {downloadStage === 'decrypting' && `🔓 Decrypting... ${downloadProgress}%`}
-                {downloadStage === 'verifying' && `✓ Verifying integrity... ${downloadProgress}%`}
+                {downloadStage === 'downloading' && `📥 Downloading...`}
+                {downloadStage === 'decrypting' && `🔓 Decrypting...`}
+                {downloadStage === 'verifying' && `✓ Verifying integrity...`}
                 {downloadStage === 'complete' && `✅ Complete!`}
                 {downloadStage === 'starting' && `⏳ Preparing download...`}
               </div>
-              <div className="text-xs text-blue-600">{downloadProgress}%</div>
+              <div className="text-xs text-blue-600 font-bold">{downloadProgress}%</div>
             </div>
             <div className="w-full bg-blue-200 h-2.5 rounded-full overflow-hidden">
               <div 
                 style={{width: `${downloadProgress}%`}} 
                 className="h-2.5 bg-blue-600 rounded-full transition-all duration-300"
               />
+            </div>
+            <div className="text-xs text-blue-600 mt-1">
+              {downloadProgress < 60 && 'Fetching file from server...'}
+              {downloadProgress >= 60 && downloadProgress < 90 && 'Decrypting with your private key...'}
+              {downloadProgress >= 90 && downloadProgress < 100 && 'Checking file integrity...'}
+              {downloadProgress === 100 && 'Ready to save!'}
             </div>
           </div>
         )}

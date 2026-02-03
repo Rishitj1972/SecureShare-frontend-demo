@@ -112,21 +112,38 @@ export function useFileEncryption() {
    */
   const calculateFileHashStreaming = useCallback(async (file) => {
     try {
+      // For small files (<100MB), read entire file at once
+      if (file.size <= 100 * 1024 * 1024) {
+        const buffer = await file.arrayBuffer()
+        const hash = await window.crypto.subtle.digest('SHA-256', buffer)
+        const bytes = new Uint8Array(hash)
+        return Array.from(bytes)
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')
+      }
+      
+      // For large files, we need to hash in chunks
+      // SubtleCrypto doesn't support streaming, so we read all chunks and combine
       const chunkSize = 10 * 1024 * 1024 // 10MB chunks
-      let hash = await window.crypto.subtle.digest('SHA-256', new Uint8Array(0))
+      const chunks = []
       
       for (let i = 0; i < file.size; i += chunkSize) {
         const chunk = file.slice(i, Math.min(i + chunkSize, file.size))
         const buffer = await chunk.arrayBuffer()
-        
-        // For streaming hash, we'd need SubtleCrypto.digest for each chunk
-        // For now, if file is small enough to chunk, read it
-        if (i === 0) {
-          hash = await window.crypto.subtle.digest('SHA-256', buffer)
-        }
+        chunks.push(new Uint8Array(buffer))
       }
       
-      // Convert to hex
+      // Combine all chunks
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+      const combined = new Uint8Array(totalLength)
+      let offset = 0
+      for (const chunk of chunks) {
+        combined.set(chunk, offset)
+        offset += chunk.length
+      }
+      
+      // Hash the complete file
+      const hash = await window.crypto.subtle.digest('SHA-256', combined)
       const bytes = new Uint8Array(hash)
       return Array.from(bytes)
         .map(b => b.toString(16).padStart(2, '0'))
