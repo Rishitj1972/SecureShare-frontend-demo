@@ -121,7 +121,6 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       setTimeout(() => setMsg(''), 3000)
     } catch (err) {
       // Even if server cancel fails, UI is already reset
-      console.error('Server cancel error:', err)
       setMsg('Upload cancelled (local)')
       setTimeout(() => setMsg(''), 3000)
     }
@@ -163,7 +162,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
             <div className="font-semibold">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
             <div className="text-xs text-gray-500">Share files securely</div>
           </div>
-          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v2.6.0</div>
+          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v2.7.0</div>
         </div>
       </div>
 

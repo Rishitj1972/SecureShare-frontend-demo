@@ -75,8 +75,6 @@ export function useChunkedUpload() {
           formData.append('chunkHash', chunkHash)
         }
 
-        console.log(`Uploading chunk ${chunkNumber}/${totalChunks} (attempt ${attempt + 1}/${maxRetries + 1})`)
-
         const res = await api.post('/files/chunked/upload-chunk', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
           timeout: 1800000, // 30 minutes timeout for each chunk
@@ -88,7 +86,6 @@ export function useChunkedUpload() {
           }
         })
 
-        console.log(`✓ Chunk ${chunkNumber} uploaded`)
         const uploadedChunks = res.data.uploadedChunks || []
         
         setUploads(prev => ({
@@ -101,14 +98,12 @@ export function useChunkedUpload() {
           }
         }))
 
-        console.log(`Chunk ${chunkNumber} uploaded successfully`)
         return res.data
       } catch (error) {
         lastError = error
         
         // Check if upload was cancelled
         if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
-          console.log(`Chunk ${chunkNumber} upload cancelled`)
           throw error // Don't retry if cancelled
         }
         
@@ -118,7 +113,6 @@ export function useChunkedUpload() {
         
         if (attempt < maxRetries && isTimeout) {
           const waitTime = 1000 * Math.pow(2, attempt) // Exponential backoff: 1s, 2s, 4s
-          console.log(`Chunk ${chunkNumber} timeout/error, retrying in ${waitTime}ms...`, error.message)
           await sleep(waitTime)
           continue
         }
@@ -176,11 +170,12 @@ export function useChunkedUpload() {
         const totalBytes = file.size
         let uploadedBytes = 0
 
-        Object.keys(chunkSizes).forEach((key) => {
+        // Optimize by iterating directly over entries
+        for (const key in chunkSizes) {
           const size = chunkSizes[key]
           const percent = inFlightProgress[key] ?? 0
           uploadedBytes += (percent / 100) * size
-        })
+        }
 
         const progress = Math.min(95, Math.max(1, Math.round((uploadedBytes / totalBytes) * 95)))
         if (progress > lastReportedProgress) {
@@ -206,12 +201,11 @@ export function useChunkedUpload() {
             uploadChunk(uploadId, chunkNum, chunk, totalChunks, (percent) => {
               inFlightProgress[chunkNum] = percent
               reportProgressFromBytes()
+            }).then(() => {
+              completedChunks++
+              inFlightProgress[chunkNum] = 100
+              reportProgressFromBytes()
             })
-              .then(() => {
-                completedChunks++
-                inFlightProgress[chunkNum] = 100
-                reportProgressFromBytes()
-              })
           )
         }
         await Promise.all(batch)
@@ -260,7 +254,6 @@ export function useChunkedUpload() {
           return await runUpload(pickSettings(2))
         }
       }
-      console.error('Upload failed:', error)
       throw error
     }
   }, [initUpload, uploadChunk])
@@ -304,8 +297,8 @@ export function useChunkedUpload() {
         })
       }, 1000)
     } catch (error) {
-      // Even if backend call fails, local cancellation succeeded
-      console.error('Error cancelling upload on server:', error)
+      // Even if backend call fails, local cancellation succeeded via AbortController
+      // Silently handle server cleanup errors as they're not critical
     }
   }, [])
 
