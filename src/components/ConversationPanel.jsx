@@ -304,15 +304,15 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       </div>
 
       <div className="mt-2 border-t pt-2 sticky bottom-0 bg-white z-10 shadow-md">
-        <form className="flex items-center gap-2 py-2" onSubmit={submit}>
-          <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded cursor-pointer hover:bg-gray-50">
+        <form className="flex flex-col md:flex-row md:items-center gap-2 py-2" onSubmit={submit}>
+          <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded cursor-pointer hover:bg-gray-50 md:flex-shrink-0">
             <input type="file" className="hidden" onChange={e=>setFileInput(e.target.files[0])} disabled={isUploading || isEncrypting} />
-            <span>📎 Attach</span>
+            <span className="text-sm md:text-base">📎 Attach</span>
           </label>
-          <div className="flex-1">
-            <div className="flex justify-between items-center">
-              <div className="text-sm flex-1">{fileInput ? fileInput.name : 'No file selected'}</div>
-              {uploadProgress > 0 && <div className="text-sm font-medium text-blue-600 ml-2">{uploadProgress}%</div>}
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-center gap-2">
+              <div className="text-xs md:text-sm flex-1 truncate">{fileInput ? fileInput.name : 'No file selected'}</div>
+              {uploadProgress > 0 && <div className="text-xs md:text-sm font-medium text-blue-600 flex-shrink-0">{uploadProgress}%</div>}
             </div>
             {uploadProgress > 0 && (
               <div className="w-full bg-gray-200 h-2.5 rounded-full mt-1.5 overflow-hidden">
@@ -334,9 +334,9 @@ export default function ConversationPanel({ userId, userObj, showNotification })
               <div className="text-xs text-gray-500 mt-1">Finalizing upload...</div>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full md:w-auto">
             <button 
-              className={`px-4 py-2 rounded font-medium transition-colors flex-1 md:flex-initial ${
+              className={`px-3 md:px-4 py-2 rounded font-medium transition-colors flex-1 md:flex-initial text-sm md:text-base ${
                 isUploading || isEncrypting
                   ? 'bg-gray-300 text-gray-600 cursor-not-allowed' 
                   : 'bg-blue-500 text-white hover:bg-blue-600'
@@ -350,7 +350,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-4 py-2 rounded font-medium text-sm bg-red-500 text-white hover:bg-red-600 transition-colors"
+                className="px-3 md:px-4 py-2 rounded font-medium text-sm bg-red-500 text-white hover:bg-red-600 transition-colors"
               >
                 Cancel
               </button>
