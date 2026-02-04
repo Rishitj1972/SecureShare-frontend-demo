@@ -101,10 +101,38 @@ export default function Chat(){
 
       {/* Empty state for desktop when no user is selected */}
       {!selected && window.innerWidth >= 768 && (
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="text-center text-gray-500">
-            <p className="text-lg font-semibold mb-2">👋 Welcome!</p>
-            <p className="text-sm">Select a contact to start sharing files</p>
+        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+          <div className="text-center max-w-md px-6">
+            <div className="mb-6 flex justify-center">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                <span className="text-5xl">👋</span>
+              </div>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">Welcome to SecureShare</h2>
+            <p className="text-gray-600 text-lg mb-4">Share files securely with your contacts</p>
+            <div className="space-y-3 mt-8 pt-8 border-t border-gray-200">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl mt-1">🔍</span>
+                <div>
+                  <p className="font-semibold text-gray-900">Search & Connect</p>
+                  <p className="text-sm text-gray-600">Find contacts using the search bar</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl mt-1">🤝</span>
+                <div>
+                  <p className="font-semibold text-gray-900">Send Friend Request</p>
+                  <p className="text-sm text-gray-600">Add users to your contact list</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl mt-1">🔒</span>
+                <div>
+                  <p className="font-semibold text-gray-900">Share Securely</p>
+                  <p className="text-sm text-gray-600">All files are encrypted end-to-end</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
