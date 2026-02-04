@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext'
 function Notification({ note }){
   if(!note) return null
   return (
-    <div className={`fixed right-4 top-4 px-4 py-2 rounded shadow ${note.type === 'error' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+    <div className={`fixed right-4 top-20 px-4 py-2 rounded shadow z-50 ${note.type === 'error' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
       {note.text}
     </div>
   )
@@ -22,6 +22,7 @@ export default function Chat(){
   const [selected, setSelected] = useState(null)
   const [note, setNote] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [showSidebar, setShowSidebar] = useState(true)
 
   useEffect(()=>{
     if (!user?.id) return // Don't fetch if user is not logged in
@@ -63,20 +64,36 @@ export default function Chat(){
   }
 
   return (
-    <div className="h-[calc(100vh-160px)] flex bg-gray-50">
-      <div className="w-64 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto">
-          <div className="p-3 border-b">
-            <SearchUsers showNotification={showNotification} onFriendAdded={handleFriendAdded} />
-            <FriendRequests showNotification={showNotification} onRefresh={handleFriendAdded} />
+    <div className="flex-1 flex flex-col md:flex-row bg-gray-50 overflow-hidden">
+      {/* Toggle button for mobile */}
+      <button
+        onClick={() => setShowSidebar(!showSidebar)}
+        className="md:hidden p-3 bg-white border-b border-gray-200 text-gray-700 hover:bg-gray-100"
+      >
+        ☰ {showSidebar ? 'Hide' : 'Show'} Contacts
+      </button>
+
+      {/* Sidebar */}
+      {(showSidebar || window.innerWidth >= 768) && (
+        <div className={`${
+          showSidebar ? 'w-full md:w-64' : 'hidden md:w-64'
+        } flex flex-col overflow-hidden bg-white border-r border-gray-200`}>
+          <div className="flex-1 overflow-auto">
+            <div className="p-3 border-b bg-white">
+              <SearchUsers showNotification={showNotification} onFriendAdded={handleFriendAdded} />
+              <FriendRequests showNotification={showNotification} onRefresh={handleFriendAdded} />
+            </div>
+            <UsersList users={users} selectedId={selected?._id} onSelect={u => {setSelected(u); setShowSidebar(false);}} loading={loading} />
           </div>
-          <UsersList users={users} selectedId={selected?._id} onSelect={u=>setSelected(u)} loading={loading} />
         </div>
-      </div>
-      <div className="flex-1">
+      )}
+
+      {/* Conversation Panel */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         <ConversationPanel userId={selected?._id} userObj={selected} showNotification={showNotification} />
       </div>
       <Notification note={note} />
     </div>
   )
 }
+
