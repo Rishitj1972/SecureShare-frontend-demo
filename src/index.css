@@ -11,3 +11,27 @@ html, body, #root { height: 100%; }
 .btn { @apply px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-700 }
 .nav { @apply flex gap-4 mb-4 }
 .file-item { @apply flex justify-between items-center p-2 border-b border-gray-100 }
+
+/* Custom scrollbar styling for better visibility */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #9CA3AF #F3F4F6;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #F3F4F6;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #9CA3AF;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}

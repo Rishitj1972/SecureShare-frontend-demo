@@ -21,7 +21,7 @@ export default function UsersList({ users, selectedId, onSelect, loading }){
     <div className="h-full flex flex-col bg-white">
       <div className="font-semibold mb-3 px-3 pt-3 text-gray-800">👥 Contacts</div>
       {loading && <div className="text-sm text-gray-500 px-3">Loading...</div>}
-      <div className="space-y-1 overflow-auto flex-1 px-2">
+      <div className="space-y-1 overflow-y-auto flex-1 px-2 custom-scrollbar">
         {users.map(u => (
           <button
             key={u._id}
