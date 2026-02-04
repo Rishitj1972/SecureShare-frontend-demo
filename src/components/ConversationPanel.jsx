@@ -36,6 +36,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [downloadStage, setDownloadStage] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
+    const [isUnfriending, setIsUnfriending] = useState(false)
   const mounted = useRef(true)
   const { uploadFile, cancelUpload } = useChunkedUpload()
   const { encryptFileForUpload, getReceiverPublicKey } = useFileEncryption()
@@ -181,6 +182,25 @@ export default function ConversationPanel({ userId, userObj, showNotification })
         fileId, 
         user?.id, 
         fileMeta,
+  
+          const handleUnfriend = async () => {
+            if (!window.confirm(`Are you sure you want to remove ${userObj?.name || userObj?.username}?`)) return
+    
+            setIsUnfriending(true)
+            try {
+              await api.delete(`/friends/${userId}`)
+              showNotification && showNotification('Friend removed successfully', 'success')
+              // Reset the selected user in parent component
+              // This will be handled by refreshing the friends list
+              setTimeout(() => {
+                window.location.reload() // Reload to refresh friends list
+              }, 1500)
+            } catch (err) {
+              showNotification && showNotification(err?.response?.data?.message || 'Failed to remove friend', 'error')
+            } finally {
+              setIsUnfriending(false)
+            }
+          }
         (progress, stage) => {
           // Map progress to cumulative scale:
           // Download: 0-60%
@@ -267,6 +287,15 @@ export default function ConversationPanel({ userId, userObj, showNotification })
             </div>
           </div>
           <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono whitespace-nowrap">v4.2.0 🔐 E2EE</div>
+                  {userObj && (
+                    <button
+                      onClick={handleUnfriend}
+                      disabled={isUnfriending}
+                      className="px-3 py-1 text-xs md:text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded font-medium transition-colors disabled:opacity-50"
+                    >
+                      {isUnfriending ? '⏳ Removing...' : '✕ Unfriend'}
+                    </button>
+                  )}
         </div>
       </div>
 
