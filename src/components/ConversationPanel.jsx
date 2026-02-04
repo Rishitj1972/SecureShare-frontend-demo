@@ -182,25 +182,6 @@ export default function ConversationPanel({ userId, userObj, showNotification })
         fileId, 
         user?.id, 
         fileMeta,
-  
-          const handleUnfriend = async () => {
-            if (!window.confirm(`Are you sure you want to remove ${userObj?.name || userObj?.username}?`)) return
-    
-            setIsUnfriending(true)
-            try {
-              await api.delete(`/friends/${userId}`)
-              showNotification && showNotification('Friend removed successfully', 'success')
-              // Reset the selected user in parent component
-              // This will be handled by refreshing the friends list
-              setTimeout(() => {
-                window.location.reload() // Reload to refresh friends list
-              }, 1500)
-            } catch (err) {
-              showNotification && showNotification(err?.response?.data?.message || 'Failed to remove friend', 'error')
-            } finally {
-              setIsUnfriending(false)
-            }
-          }
         (progress, stage) => {
           // Map progress to cumulative scale:
           // Download: 0-60%
@@ -258,6 +239,25 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       setIsDownloading(false)
       setDownloadProgress(0)
       setDownloadStage('')
+    }
+  }
+
+  const handleUnfriend = async () => {
+    if (!window.confirm(`Are you sure you want to remove ${userObj?.name || userObj?.username}?`)) return
+    
+    setIsUnfriending(true)
+    try {
+      await api.delete(`/friends/${userId}`)
+      showNotification && showNotification('Friend removed successfully', 'success')
+      // Reset the selected user in parent component
+      // This will be handled by refreshing the friends list
+      setTimeout(() => {
+        window.location.reload() // Reload to refresh friends list
+      }, 1500)
+    } catch (err) {
+      showNotification && showNotification(err?.response?.data?.message || 'Failed to remove friend', 'error')
+    } finally {
+      setIsUnfriending(false)
     }
   }
 
