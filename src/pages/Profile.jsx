@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
@@ -25,10 +25,17 @@ export default function Profile() {
   const [username, setUsername] = useState(user?.username || '')
   const [email, setEmail] = useState(user?.email || '')
   const [profilePhoto, setProfilePhoto] = useState(null)
-  const [profilePreview, setProfilePreview] = useState(user?.profilePhoto || '')
+  const [profilePreview, setProfilePreview] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Initialize preview with current user's profile photo
+  useEffect(() => {
+    if (user?.profilePhoto) {
+      setProfilePreview(getPhotoUrl(user.profilePhoto))
+    }
+  }, [user?.profilePhoto])
 
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0] || null
