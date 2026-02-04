@@ -6,6 +6,22 @@ import { useFileEncryption } from '../hooks/useFileEncryption'
 import { useFileDecryption } from '../hooks/useFileDecryption'
 import { useAuth } from '../context/AuthContext'
 
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const uploadsBase = baseURL.replace(/\/api\/?$/, '')
+
+function getPhotoUrl(photo) {
+  if (!photo) return ''
+  if (photo.startsWith('http')) return photo
+  return `${uploadsBase}${photo}`
+}
+
+function getInitials(name = '') {
+  const parts = name.trim().split(' ').filter(Boolean)
+  const first = parts[0]?.[0] || ''
+  const second = parts[1]?.[0] || ''
+  return (first + second).toUpperCase() || '?'
+}
+
 export default function ConversationPanel({ userId, userObj, showNotification }){
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
@@ -229,9 +245,26 @@ export default function ConversationPanel({ userId, userObj, showNotification })
     <div className="h-full p-3 flex flex-col">
       <div className="border-b pb-2 mb-2">
         <div className="flex justify-between items-center">
-          <div>
-            <div className="font-semibold">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
-            <div className="text-xs text-gray-500">Share files securely</div>
+          <div className="flex items-center gap-3">
+            {userObj ? (
+              userObj.profilePhoto ? (
+                <img
+                  src={getPhotoUrl(userObj.profilePhoto)}
+                  alt={userObj.username || userObj.name}
+                  className="w-10 h-10 rounded-full object-cover border"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-600">
+                  {getInitials(userObj.name || userObj.username)}
+                </div>
+              )
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-100" />
+            )}
+            <div>
+              <div className="font-semibold">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
+              <div className="text-xs text-gray-500">Share files securely</div>
+            </div>
           </div>
           <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">v4.2.0 🔐 E2EE + 5GB + Circular DL</div>
         </div>
