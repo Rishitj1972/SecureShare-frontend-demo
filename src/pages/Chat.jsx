@@ -64,45 +64,38 @@ export default function Chat(){
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Show welcome message when no user is selected */}
-      {!selected ? (
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <p className="text-2xl font-semibold text-gray-600">Welcome to SecureShare</p>
+    <div className="flex-1 flex flex-col md:flex-row bg-gray-50 overflow-hidden">
+      {/* Toggle button for mobile only */}
+      <button
+        onClick={() => setShowSidebar(!showSidebar)}
+        className="md:hidden p-3 bg-white border-b border-gray-200 text-gray-700 hover:bg-gray-100 font-semibold"
+      >
+        ☰ {showSidebar ? 'Hide Contacts' : 'Show Contacts'}
+      </button>
+
+      {/* Sidebar - Mobile: Toggle visibility, Desktop: Always visible */}
+      <div className={`${
+        showSidebar ? 'block' : 'hidden'
+      } md:block md:w-80 flex flex-col overflow-hidden bg-white border-r border-gray-200`}>
+        <div className="flex-1 overflow-auto">
+          <div className="p-3 border-b bg-white sticky top-0 z-10">
+            <SearchUsers showNotification={showNotification} onFriendAdded={handleFriendAdded} />
+            <FriendRequests showNotification={showNotification} onRefresh={handleFriendAdded} />
+          </div>
+          <UsersList users={users} selectedId={selected?._id} onSelect={u => {
+            setSelected(u)
+            // Only hide sidebar on mobile when a user is selected
+            if (window.innerWidth < 768) {
+              setShowSidebar(false)
+            }
+          }} loading={loading} />
         </div>
-      ) : (
-        <div className="flex-1 flex flex-col md:flex-row bg-gray-50 overflow-hidden">
-          {/* Toggle button for mobile only */}
-          <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="md:hidden p-3 bg-white border-b border-gray-200 text-gray-700 hover:bg-gray-100 font-semibold"
-          >
-            ☰ {showSidebar ? 'Hide Contacts' : 'Show Contacts'}
-          </button>
+      </div>
 
-          {/* Sidebar - Mobile: Toggle visibility, Desktop: Always visible */}
-          <div className={`${
-            showSidebar ? 'block' : 'hidden'
-          } md:block md:w-80 flex flex-col overflow-hidden bg-white border-r border-gray-200`}>
-            <div className="flex-1 overflow-auto">
-              <div className="p-3 border-b bg-white sticky top-0 z-10">
-                <SearchUsers showNotification={showNotification} onFriendAdded={handleFriendAdded} />
-                <FriendRequests showNotification={showNotification} onRefresh={handleFriendAdded} />
-              </div>
-              <UsersList users={users} selectedId={selected?._id} onSelect={u => {
-                setSelected(u)
-                // Only hide sidebar on mobile when a user is selected
-                if (window.innerWidth < 768) {
-                  setShowSidebar(false)
-                }
-              }} loading={loading} />
-            </div>
-          </div>
-
-          {/* Conversation Panel */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <ConversationPanel userId={selected?._id} userObj={selected} showNotification={showNotification} />
-          </div>
+      {/* Conversation Panel - Desktop: Always visible with selected user, Mobile: Show when sidebar is hidden */}
+      {(selected || window.innerWidth >= 768) && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <ConversationPanel userId={selected?._id} userObj={selected} showNotification={showNotification} />
         </div>
       )}
 
