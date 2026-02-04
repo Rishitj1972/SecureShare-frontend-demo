@@ -286,7 +286,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
               <div className="text-xs text-gray-500">Share files securely</div>
             </div>
           </div>
-          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono whitespace-nowrap">v4.2.0 🔐 E2EE</div>
+          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono whitespace-nowrap">v5.0.0 🔐 E2EE</div>
                   {userObj && (
                     <button
                       onClick={handleUnfriend}
