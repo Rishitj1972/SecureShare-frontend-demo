@@ -69,13 +69,13 @@ export default function FileCard({ file, onDownload, onDelete, isSent, currentUs
   const isThisFileDownloading = isDownloading && !isSent
   
   return (
-    <div className={`flex items-start gap-3 p-4 rounded-xl shadow-sm border transition-all hover:shadow-md ${
+    <div className={`flex items-start gap-3 p-3 md:p-4 rounded-xl shadow-sm border transition-all hover:shadow-md ${
       isSent 
-        ? 'bg-green-50 border-green-200 ml-8' 
-        : 'bg-blue-50 border-blue-200 mr-8'
+        ? 'bg-green-50 border-green-200 md:ml-8' 
+        : 'bg-blue-50 border-blue-200 md:mr-8'
     }`}>
       {/* File Icon or Download Progress */}
-      <div className="relative flex-shrink-0">
+      <div className="relative flex-shrink-0 scale-90 md:scale-100 origin-top">
         {isThisFileDownloading ? (
           <div className="flex flex-col items-center gap-1">
             <CircularProgress progress={downloadProgress} size={56} strokeWidth={4} />

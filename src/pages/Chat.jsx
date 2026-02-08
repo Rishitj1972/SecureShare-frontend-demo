@@ -68,7 +68,7 @@ export default function Chat(){
       {/* Toggle button for mobile only */}
       <button
         onClick={() => setShowSidebar(!showSidebar)}
-        className="md:hidden p-3 bg-white border-b border-gray-200 text-gray-700 hover:bg-gray-100 font-semibold"
+        className="md:hidden p-3 bg-white border-b border-gray-200 text-gray-700 hover:bg-gray-100 font-semibold sticky top-0 z-20"
       >
         ☰ {showSidebar ? 'Hide Contacts' : 'Show Contacts'}
       </button>
