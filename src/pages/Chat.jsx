@@ -64,7 +64,7 @@ export default function Chat(){
   }
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row bg-gray-50 overflow-hidden">
+    <div className="flex-1 flex flex-col md:flex-row bg-gray-50 overflow-hidden min-h-0">
       {/* Toggle button for mobile only */}
       <button
         onClick={() => setShowSidebar(!showSidebar)}
