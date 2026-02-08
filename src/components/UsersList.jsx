@@ -18,11 +18,11 @@ function getInitials(name = '') {
 
 export default function UsersList({ users, selectedId, onSelect, loading }){
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white min-h-0">
       <div className="font-semibold px-3 pt-3 pb-2 text-gray-800 border-b">👥 Contacts</div>
       {loading && <div className="text-sm text-gray-500 px-3 py-3">Loading...</div>}
       {!loading && (
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
           <div className="space-y-1 px-2 py-2">
             {users.map(u => (
               <button

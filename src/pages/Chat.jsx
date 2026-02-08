@@ -76,12 +76,12 @@ export default function Chat(){
       {/* Sidebar - Mobile: Toggle visibility, Desktop: Always visible */}
       <div className={`${
         showSidebar ? 'block' : 'hidden'
-      } md:block md:w-80 flex flex-col overflow-hidden bg-white border-r border-gray-200`}>
+      } md:block md:w-80 flex flex-col overflow-hidden bg-white border-r border-gray-200 min-h-0`}>
         <div className="p-3 border-b bg-white z-10">
           <SearchUsers showNotification={showNotification} onFriendAdded={handleFriendAdded} />
           <FriendRequests showNotification={showNotification} onRefresh={handleFriendAdded} />
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-0">
           <UsersList users={users} selectedId={selected?._id} onSelect={u => {
             setSelected(u)
             // Only hide sidebar on mobile when a user is selected
