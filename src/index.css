@@ -35,3 +35,14 @@ html, body, #root { height: 100%; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #6B7280;
 }
+
+/* Keep contacts list scrollable within the viewport */
+.contacts-scroll {
+  max-height: calc(100vh - 260px);
+}
+
+@media (min-width: 768px) {
+  .contacts-scroll {
+    max-height: calc(100vh - 300px);
+  }
+}
