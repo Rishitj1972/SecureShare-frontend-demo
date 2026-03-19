@@ -38,6 +38,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [downloadStage, setDownloadStage] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadingFileId, setDownloadingFileId] = useState(null)
   const [isUnfriending, setIsUnfriending] = useState(false)
   const mounted = useRef(true)
   const { uploadFile, cancelUpload } = useChunkedUpload()
@@ -173,8 +174,14 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   }
 
   const onDownload = async (fileId, fileMeta) => {
+    if (isDownloading) {
+      showNotification && showNotification('Another download is already in progress', 'info')
+      return
+    }
+
     try{
       setIsDownloading(true)
+      setDownloadingFileId(fileId)
       setDownloadProgress(0)
       setDownloadStage('starting')
       showNotification && showNotification('Starting download...', 'info')
@@ -239,6 +246,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       console.error('Download error:', err)
     } finally {
       setIsDownloading(false)
+      setDownloadingFileId(null)
       setDownloadProgress(0)
       setDownloadStage('')
     }
@@ -315,6 +323,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
                 isSent={f.sender._id === user?.id}
                 currentUserId={user?.id}
                 isDownloading={isDownloading}
+                downloadingFileId={downloadingFileId}
                 downloadProgress={downloadProgress}
                 downloadStage={downloadStage}
                 onDownload={() => onDownload(f._id, f)} 

@@ -60,13 +60,13 @@ function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
-export default function FileCard({ file, onDownload, onDelete, isSent, currentUserId, isDownloading, downloadProgress, downloadStage }){
+export default function FileCard({ file, onDownload, onDelete, isSent, currentUserId, isDownloading, downloadingFileId, downloadProgress, downloadStage }){
   const name = file.originalFileName || file.originalName || 'file'
   const sizeFormatted = formatFileSize(file.fileSize)
   const time = file.createdAt ? new Date(file.createdAt).toLocaleString() : ''
   
   // Check if this specific file is being downloaded
-  const isThisFileDownloading = isDownloading && !isSent
+  const isThisFileDownloading = isDownloading && !isSent && downloadingFileId === file._id
   
   return (
     <div className={`flex flex-col md:flex-row items-start gap-3 p-3 md:p-4 rounded-xl shadow-sm border transition-all hover:shadow-md ${
@@ -123,7 +123,7 @@ export default function FileCard({ file, onDownload, onDelete, isSent, currentUs
             {!isSent && (
               !isThisFileDownloading && (
                 <button 
-                  onClick={() => onDownload(file._id)} 
+                  onClick={onDownload} 
                   className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-blue-300 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors w-full md:w-auto justify-center"
                 >
                   <ArrowDownTrayIcon className="w-4 h-4" />
