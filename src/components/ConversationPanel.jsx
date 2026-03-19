@@ -24,6 +24,10 @@ function getInitials(name = '') {
   return (first + second).toUpperCase() || '?'
 }
 
+function sortConversationFiles(files = []) {
+  return [...files].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+}
+
 export default function ConversationPanel({ userId, userObj, showNotification }){
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
@@ -41,6 +45,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const [downloadingFileId, setDownloadingFileId] = useState(null)
   const [isUnfriending, setIsUnfriending] = useState(false)
   const mounted = useRef(true)
+  const listRef = useRef(null)
   const { uploadFile, cancelUpload } = useChunkedUpload()
   const { encryptFileForUpload, getReceiverPublicKey } = useFileEncryption()
   const { downloadAndDecrypt } = useFileDecryption()
@@ -54,7 +59,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       try{
         const res = await api.get(`/files/with/${userId}`)
         if(!mounted.current) return
-        setFiles(res.data)
+        setFiles(sortConversationFiles(res.data))
       }catch(err){
         showNotification && showNotification(err?.response?.data?.message || 'Failed to load files', 'error')
       }finally{
@@ -65,6 +70,11 @@ export default function ConversationPanel({ userId, userObj, showNotification })
     return ()=>{ mounted.current = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[userId])
+
+  useEffect(() => {
+    if (!listRef.current) return
+    listRef.current.scrollTop = listRef.current.scrollHeight
+  }, [files.length, userId])
 
   const submit = async (e) => {
     e && e.preventDefault && e.preventDefault()
@@ -130,7 +140,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       
       // Refresh file list
       const r = await api.get(`/files/with/${userId}`)
-      setFiles(r.data)
+      setFiles(sortConversationFiles(r.data))
       
       // Reset progress bar after a short delay
       setTimeout(() => {
@@ -311,7 +321,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto space-y-2 md:space-y-4 mb-3 px-1 md:px-2">
+      <div ref={listRef} className="flex-1 overflow-auto space-y-2 md:space-y-4 mb-3 px-1 md:px-2">
         {loading && <div className="text-sm text-gray-500">Loading files...</div>}
         
         {!loading && files.length > 0 && (
