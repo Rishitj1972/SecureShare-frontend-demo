@@ -18,11 +18,19 @@ function Notification({ note }){
 export default function Chat(){
   const { user } = useAuth()
   const [users, setUsers] = useState([])
+  const [presenceMap, setPresenceMap] = useState({})
   const [loading, setLoading] = useState(false)
   const [selected, setSelected] = useState(null)
   const [note, setNote] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [showSidebar, setShowSidebar] = useState(true)
+  const selectedWithPresence = selected
+    ? {
+        ...selected,
+        isActive: !!presenceMap[selected._id]?.isActive,
+        lastSeen: presenceMap[selected._id]?.lastSeen || null
+      }
+    : null
 
   useEffect(()=>{
     if (!user?.id) return // Don't fetch if user is not logged in
@@ -53,6 +61,40 @@ export default function Chat(){
     load()
   },[user?.id, refreshKey])
 
+  useEffect(() => {
+    if (!user?.id) return
+
+    let cancelled = false
+
+    const loadPresence = async () => {
+      try {
+        const res = await api.get('/friends/presence')
+        if (cancelled || !Array.isArray(res.data)) return
+
+        const nextMap = {}
+        res.data.forEach((item) => {
+          const id = item?.userId?._id || item?.userId
+          if (!id) return
+          nextMap[id] = {
+            isActive: !!item.isActive,
+            lastSeen: item.lastSeen || null
+          }
+        })
+        setPresenceMap(nextMap)
+      } catch (_) {
+        // Presence polling is non-critical; keep UI functional.
+      }
+    }
+
+    loadPresence()
+    const intervalId = setInterval(loadPresence, 30000)
+
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+    }
+  }, [user?.id])
+
   const showNotification = (text, type='success') => {
     setNote({ text, type })
     setTimeout(()=> setNote(null), 3500)
@@ -82,7 +124,7 @@ export default function Chat(){
           <FriendRequests showNotification={showNotification} onRefresh={handleFriendAdded} />
         </div>
         <div className="flex-1 overflow-hidden min-h-0">
-          <UsersList users={users} selectedId={selected?._id} onSelect={u => {
+          <UsersList users={users} presenceMap={presenceMap} selectedId={selected?._id} onSelect={u => {
             setSelected(u)
             // Only hide sidebar on mobile when a user is selected
             if (window.innerWidth < 768) {
@@ -95,7 +137,7 @@ export default function Chat(){
       {/* Conversation Panel - Desktop: Always visible with selected user, Mobile: Show when sidebar is hidden */}
       {(selected || window.innerWidth >= 768) && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <ConversationPanel userId={selected?._id} userObj={selected} showNotification={showNotification} />
+          <ConversationPanel userId={selected?._id} userObj={selectedWithPresence} showNotification={showNotification} />
         </div>
       )}
 

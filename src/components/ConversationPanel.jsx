@@ -303,7 +303,15 @@ export default function ConversationPanel({ userId, userObj, showNotification })
             )}
             <div className="min-w-0">
               <div className="font-semibold text-base md:text-base truncate">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
-              <div className="text-[11px] md:text-xs text-gray-500">Share files securely</div>
+              <div className="flex items-center gap-2 text-[11px] md:text-xs text-gray-500">
+                <span>Share files securely</span>
+                {userObj && (
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${userObj.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${userObj.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    {userObj.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
