@@ -287,7 +287,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
       // Download and decrypt file with progress tracking
       const decryptedBlob = await downloadAndDecrypt(
         fileId, 
-        user?.id, 
+        user?.id || user?._id, 
         fileMeta,
         (progress, stage) => {
           // Map progress to cumulative scale:
