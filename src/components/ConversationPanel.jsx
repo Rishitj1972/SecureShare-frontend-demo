@@ -59,7 +59,6 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const [editingAdminId, setEditingAdminId] = useState('')
   const [groupPhotoFile, setGroupPhotoFile] = useState(null)
   const [groupPhotoPreview, setGroupPhotoPreview] = useState('')
-  const [removeGroupPhoto, setRemoveGroupPhoto] = useState(false)
   const [isSavingGroup, setIsSavingGroup] = useState(false)
   const mounted = useRef(true)
   const listRef = useRef(null)
@@ -72,7 +71,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const ownerId = groupObj?.owner?._id || groupObj?.owner
   const isGroupOwner = isGroupMode && !!ownerId && String(ownerId) === String(currentUserId)
   const currentGroupPhotoUrl = groupObj?.groupPhoto ? getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt) : ''
-  const visibleGroupPhotoPreview = removeGroupPhoto ? '' : (groupPhotoPreview || currentGroupPhotoUrl)
+  const visibleGroupPhotoPreview = groupPhotoPreview || currentGroupPhotoUrl
 
   const memberStatusByUserId = groupMembers.reduce((acc, member) => {
     const memberUserId = member?.user?._id || member?.user
@@ -136,7 +135,6 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
     setSelectedNewMemberIds([])
     setGroupPhotoFile(null)
     setGroupPhotoPreview('')
-    setRemoveGroupPhoto(false)
 
     if (!isGroupMode || !groupObj?._id) {
       setGroupMembers([])
@@ -178,7 +176,6 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
     setGroupPhotoFile(file)
     if (file) {
       setGroupPhotoPreview(URL.createObjectURL(file))
-      setRemoveGroupPhoto(false)
     }
   }
 
@@ -227,7 +224,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
     const currentAdminId = String(groupObj?.owner?._id || groupObj?.owner || '')
     const nextAdminId = String(editingAdminId || '')
 
-    const hasPhotoChange = !!groupPhotoFile || removeGroupPhoto
+    const hasPhotoChange = !!groupPhotoFile
     const hasNameChange = trimmedName !== currentName
     const hasAdminChange = !!nextAdminId && nextAdminId !== currentAdminId
 
@@ -245,8 +242,6 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
         await api.put(`/groups/${groupObj._id}/photo`, photoForm, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
-      } else if (removeGroupPhoto) {
-        await api.put(`/groups/${groupObj._id}/photo`, { removePhoto: true })
       }
 
       // Update metadata only when changed
@@ -264,7 +259,6 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
 
       setGroupPhotoFile(null)
       setGroupPhotoPreview('')
-      setRemoveGroupPhoto(false)
       setShowEditGroup(false)
       showNotification && showNotification('Group updated successfully', 'success')
     } catch (err) {
@@ -748,46 +742,27 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                     Change Photo
                   </span>
                 </label>
-
-                <label className="inline-flex items-center gap-1 text-xs text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={removeGroupPhoto}
-                    onChange={(e) => {
-                      setRemoveGroupPhoto(e.target.checked)
-                      if (e.target.checked) {
-                        setGroupPhotoFile(null)
-                        setGroupPhotoPreview('')
-                      }
-                      if (!e.target.checked && groupObj?.groupPhoto) {
-                        setGroupPhotoPreview(getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt))
-                      }
-                    }}
-                  />
-                  Remove current photo
-                </label>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col md:flex-row gap-2 pt-1">
               <button
                 type="button"
                 onClick={handleSaveGroup}
                 disabled={isSavingGroup}
-                className="px-3 py-1.5 text-xs md:text-sm bg-indigo-600 text-white rounded disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 font-semibold transition text-sm"
               >
-                {isSavingGroup ? 'Saving...' : 'Save Group'}
+                {isSavingGroup ? 'Saving...' : 'Save Changes'}
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setShowEditGroup(false)
                   setGroupPhotoFile(null)
-                  setRemoveGroupPhoto(false)
                   setGroupPhotoPreview('')
                 }}
                 disabled={isSavingGroup}
-                className="px-3 py-1.5 text-xs md:text-sm bg-gray-200 text-gray-700 rounded"
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 font-semibold transition text-sm"
               >
                 Cancel
               </button>
