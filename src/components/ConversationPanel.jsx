@@ -197,11 +197,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
 
     setIsSavingGroup(true)
     try {
-      await api.put(`/groups/${groupObj._id}`, {
-        name: trimmedName,
-        adminId: editingAdminId || undefined
-      })
-
+      // Update group photo first if needed (separate request)
       if (groupPhotoFile) {
         const photoForm = new FormData()
         photoForm.append('groupPhoto', groupPhotoFile)
@@ -211,6 +207,12 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
         removeForm.append('removePhoto', 'true')
         await api.put(`/groups/${groupObj._id}/photo`, removeForm)
       }
+
+      // Then update group details (name/admin)
+      await api.put(`/groups/${groupObj._id}`, {
+        name: trimmedName,
+        adminId: editingAdminId || undefined
+      })
 
       await onRefreshGroups?.()
 
