@@ -171,7 +171,7 @@ h6 {
 
 /* Keep contacts list scrollable within the viewport */
 .contacts-scroll {
-  max-height: calc(100vh - 275px);
+  max-height: calc(100vh - 235px);
 }
 
 @media (min-width: 768px) {
@@ -180,6 +180,6 @@ h6 {
   }
 
   .contacts-scroll {
-    max-height: calc(100vh - 315px);
+    max-height: calc(100vh - 265px);
   }
 }

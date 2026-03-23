@@ -203,10 +203,10 @@ export default function Chat(){
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {mode === 'friends' ? (
             <>
-              <div className="px-3 py-3 border-b border-slate-200 flex-shrink-0">
+              <div className="px-3 py-2 border-b border-slate-200 flex-shrink-0">
                 <SearchUsers showNotification={showNotification} onFriendAdded={refreshFriends} />
               </div>
-              <div className="px-3 py-2 border-b border-slate-200 flex-shrink-0">
+              <div className="px-3 py-1.5 border-b border-slate-200 flex-shrink-0">
                 <FriendRequests showNotification={showNotification} onRefresh={refreshFriends} />
               </div>
               <div className="flex-1 min-h-0 overflow-hidden">
