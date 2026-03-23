@@ -687,7 +687,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
         )}
 
         {isGroupMode && groupObj && isGroupOwner && showEditGroup && (
-          <div className="mt-3 mb-4 border rounded-lg p-3 bg-indigo-50 space-y-3">
+          <div className="mt-3 mb-12 border rounded-lg p-3 bg-indigo-50 space-y-3">
             <div className="text-xs md:text-sm font-semibold text-indigo-800">Edit group details</div>
 
             <div>
