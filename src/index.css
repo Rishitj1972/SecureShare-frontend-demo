@@ -63,15 +63,14 @@ h6 {
 .glass-panel {
   background: rgba(252, 255, 253, 0.82);
   border: 1px solid rgba(191, 211, 202, 0.75);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 22px rgba(11, 48, 41, 0.08);
 }
 
 .section-card {
   background: var(--bg-secondary);
   border: 1px solid var(--line-soft);
   border-radius: 1rem;
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0 8px 20px rgba(11, 48, 41, 0.07);
 }
 
 .soft-pill {
@@ -105,11 +104,11 @@ h6 {
   padding: 0.7rem 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .ui-btn:hover {
-  transform: translateY(-1px);
+  filter: brightness(0.98);
 }
 
 .ui-btn-primary {
@@ -131,7 +130,7 @@ h6 {
 }
 
 .fade-up {
-  animation: fadeUp 420ms ease both;
+  animation: fadeUp 240ms ease both;
 }
 
 @keyframes fadeUp {
@@ -181,5 +180,14 @@ h6 {
 
   .contacts-scroll {
     max-height: calc(100vh - 265px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
