@@ -165,60 +165,84 @@ export default function Chat(){
   }
 
   return (
-    <div className="h-[calc(100vh-160px)] flex bg-gray-50">
-      <div className="w-64">
-        <div className="flex border-b bg-white">
-          <button
-            className={`flex-1 py-2 text-sm ${mode === 'friends' ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-600'}`}
-            onClick={() => setMode('friends')}
-          >
-            Friends
-          </button>
-          <button
-            className={`flex-1 py-2 text-sm ${mode === 'groups' ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-600'}`}
-            onClick={() => setMode('groups')}
-          >
-            Groups
-          </button>
+    <div className="h-[calc(100vh-160px)] flex bg-gradient-to-br from-slate-50 to-sky-50">
+      {/* Sidebar */}
+      <div className="w-full sm:w-72 lg:w-80 border-r border-slate-200 bg-white flex flex-col min-h-0 shadow-sm">
+        {/* Header */}
+        <div className="px-4 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-blue-700 sticky top-0 z-20">
+          <h1 className="font-bold text-lg text-white mb-3 flex items-center gap-2">
+            <span className="text-xl">🔐</span> Secure Share
+          </h1>
+          
+          {/* Mode Toggle */}
+          <div className="flex gap-2 bg-blue-500/30 rounded-lg p-1.5">
+            <button
+              onClick={() => setMode('friends')}
+              className={`flex-1 px-3 py-2 text-xs md:text-sm font-semibold rounded-md transition-all duration-200 ${
+                mode === 'friends'
+                  ? 'bg-white text-blue-700 shadow-md'
+                  : 'text-white hover:bg-white/10'
+              }`}
+            >
+              👥 Friends
+            </button>
+            <button
+              onClick={() => setMode('groups')}
+              className={`flex-1 px-3 py-2 text-xs md:text-sm font-semibold rounded-md transition-all duration-200 ${
+                mode === 'groups'
+                  ? 'bg-white text-blue-700 shadow-md'
+                  : 'text-white hover:bg-white/10'
+              }`}
+            >
+              👫 Groups
+            </button>
+          </div>
         </div>
 
-        {mode === 'friends' ? (
-          <div className="h-full flex flex-col min-h-0 bg-white">
-            <div className="px-2 pt-2">
-              <SearchUsers showNotification={showNotification} onFriendAdded={refreshFriends} />
-              <FriendRequests showNotification={showNotification} onRefresh={refreshFriends} />
-            </div>
-            <div className="flex-1 min-h-0">
-              <UsersList
-                users={users}
-                presenceMap={presenceMap}
-                selectedId={selectedFriend?._id}
-                onSelect={(u) => {
-                  setSelectedFriend(u)
-                  setSelectedGroup(null)
-                }}
-                loading={loading}
-              />
-            </div>
-          </div>
-        ) : (
-          <GroupsList
-            groups={groups}
-            pendingInvites={pendingInvites}
-            friends={users}
-            latestCreatedGroupId={latestCreatedGroupId}
-            selectedGroupId={selectedGroup?._id}
-            loading={loading}
-            onCreateGroup={createGroup}
-            onRespondToInvite={respondToInvite}
-            onSelectGroup={(group) => {
-              setSelectedGroup(group)
-              setSelectedFriend(null)
-            }}
-          />
-        )}
+        {/* Content */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+          {mode === 'friends' ? (
+            <>
+              <div className="px-3 py-3 border-b border-slate-200 flex-shrink-0">
+                <SearchUsers showNotification={showNotification} onFriendAdded={refreshFriends} />
+              </div>
+              <div className="px-3 py-2 border-b border-slate-200 flex-shrink-0">
+                <FriendRequests showNotification={showNotification} onRefresh={refreshFriends} />
+              </div>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <UsersList
+                  users={users}
+                  presenceMap={presenceMap}
+                  selectedId={selectedFriend?._id}
+                  onSelect={(u) => {
+                    setSelectedFriend(u)
+                    setSelectedGroup(null)
+                  }}
+                  loading={loading}
+                />
+              </div>
+            </>
+          ) : (
+            <GroupsList
+              groups={groups}
+              pendingInvites={pendingInvites}
+              friends={users}
+              latestCreatedGroupId={latestCreatedGroupId}
+              selectedGroupId={selectedGroup?._id}
+              loading={loading}
+              onCreateGroup={createGroup}
+              onRespondToInvite={respondToInvite}
+              onSelectGroup={(group) => {
+                setSelectedGroup(group)
+                setSelectedFriend(null)
+              }}
+            />
+          )}
+        </div>
       </div>
-      <div className="flex-1">
+
+      {/* Main Conversation Area */}
+      <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden">
         <ConversationPanel
           userId={selectedFriend?._id}
           userObj={selectedWithPresence}
@@ -229,6 +253,7 @@ export default function Chat(){
           showNotification={showNotification}
         />
       </div>
+
       <Notification note={note} />
     </div>
   )
