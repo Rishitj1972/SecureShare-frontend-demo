@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import UsersList from '../components/UsersList'
 import GroupsList from '../components/GroupsList'
 import ConversationPanel from '../components/ConversationPanel'
+import SearchUsers from '../components/SearchUsers'
+import FriendRequests from '../components/FriendRequests'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 
@@ -25,6 +27,17 @@ export default function Chat(){
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [mode, setMode] = useState('friends')
   const [note, setNote] = useState(null)
+
+  const loadFriends = async () => {
+    const res = await api.get('/friends')
+
+    if (!Array.isArray(res.data)) {
+      console.error('Expected users array, got:', res.data)
+      throw new Error('Invalid users response')
+    }
+
+    setUsers(res.data)
+  }
 
   const selectedWithPresence = selectedFriend
     ? {
@@ -50,16 +63,7 @@ export default function Chat(){
     const load = async () =>{
       setLoading(true)
       try{
-        const res = await api.get('/friends')
-
-        // 🔒 SAFETY CHECK (MANDATORY)
-    if (!Array.isArray(res.data)) {
-      console.error('Expected users array, got:', res.data)
-      throw new Error('Invalid users response')
-    }
-
-        setUsers(res.data)
-        await loadGroups()
+        await Promise.all([loadFriends(), loadGroups()])
       }catch(err){
         console.error(err)
         setNote({ text: err?.response?.data?.message || 'Failed to load friends', type: 'error' })
@@ -109,6 +113,14 @@ export default function Chat(){
     setTimeout(()=> setNote(null), 3500)
   }
 
+  const refreshFriends = async () => {
+    try {
+      await loadFriends()
+    } catch (err) {
+      showNotification(err?.response?.data?.message || 'Failed to refresh friends', 'error')
+    }
+  }
+
   const createGroup = async ({ name, memberIds }) => {
     try {
       await api.post('/groups', { name, memberIds })
@@ -150,16 +162,24 @@ export default function Chat(){
         </div>
 
         {mode === 'friends' ? (
-          <UsersList
-            users={users}
-            presenceMap={presenceMap}
-            selectedId={selectedFriend?._id}
-            onSelect={(u) => {
-              setSelectedFriend(u)
-              setSelectedGroup(null)
-            }}
-            loading={loading}
-          />
+          <div className="h-full flex flex-col min-h-0 bg-white">
+            <div className="px-2 pt-2">
+              <SearchUsers showNotification={showNotification} onFriendAdded={refreshFriends} />
+              <FriendRequests showNotification={showNotification} onRefresh={refreshFriends} />
+            </div>
+            <div className="flex-1 min-h-0">
+              <UsersList
+                users={users}
+                presenceMap={presenceMap}
+                selectedId={selectedFriend?._id}
+                onSelect={(u) => {
+                  setSelectedFriend(u)
+                  setSelectedGroup(null)
+                }}
+                loading={loading}
+              />
+            </div>
+          </div>
         ) : (
           <GroupsList
             groups={groups}
