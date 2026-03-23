@@ -745,12 +745,13 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-2 pt-1">
+            <div className="sticky bottom-0 -mx-3 px-3 py-3 bg-indigo-50/95 backdrop-blur supports-[backdrop-filter]:bg-indigo-50/80 border-t border-indigo-200 rounded-b-lg">
+              <div className="flex flex-col md:flex-row gap-3">
               <button
                 type="button"
                 onClick={handleSaveGroup}
                 disabled={isSavingGroup}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 font-semibold transition text-sm"
+                className="flex-1 min-h-[44px] px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition text-sm md:text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 {isSavingGroup ? 'Saving...' : 'Save Changes'}
               </button>
@@ -762,10 +763,11 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                   setGroupPhotoPreview('')
                 }}
                 disabled={isSavingGroup}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 font-semibold transition text-sm"
+                className="flex-1 min-h-[44px] px-4 py-2.5 bg-white text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-100 font-semibold transition text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
               >
                 Cancel
               </button>
+              </div>
             </div>
           </div>
         )}
