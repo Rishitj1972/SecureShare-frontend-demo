@@ -14,12 +14,13 @@ export function useChunkedUpload() {
     return CryptoJS.SHA256(wordArray).toString()
   }, [])
 
-  const initUpload = useCallback(async (file, receiverId, preferredChunkSize, encryptionData = null) => {
+  const initUpload = useCallback(async (file, receiverId, preferredChunkSize, encryptionData = null, groupId = null) => {
     try {
       const res = await api.post('/files/chunked/init', {
         filename: file.name,
         fileSize: file.size,
         receiver: receiverId,
+        groupId,
         mimeType: file.type,
         preferredChunkSize,
         encryptedAesKey: encryptionData?.encryptedAesKey,
@@ -135,7 +136,7 @@ export function useChunkedUpload() {
     throw lastError
   }, [calculateChunkHash, sleep])
 
-  const uploadFile = useCallback(async (file, receiverId, onProgress, onUploadIdReady, encryptionData = null) => {
+  const uploadFile = useCallback(async (file, receiverId, onProgress, onUploadIdReady, encryptionData = null, groupId = null) => {
     const fileSizeInMB = file.size / (1024 * 1024);
 
     const pickSettings = (level) => {
@@ -154,7 +155,7 @@ export function useChunkedUpload() {
     };
 
     const runUpload = async ({ chunkSize: preferredChunkSize, parallel }) => {
-      const { uploadId, chunkSize, totalChunks } = await initUpload(file, receiverId, preferredChunkSize, encryptionData)
+      const { uploadId, chunkSize, totalChunks } = await initUpload(file, receiverId, preferredChunkSize, encryptionData, groupId)
 
       // Create AbortController for this upload
       abortControllers.current[uploadId] = new AbortController()

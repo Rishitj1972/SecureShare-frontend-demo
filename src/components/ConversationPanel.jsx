@@ -55,13 +55,21 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
   useEffect(()=>{
     mounted.current = true
     const load = async () => {
-      if(!userId || isGroupMode) {
+      if(isGroupMode && !groupObj?._id) {
         setFiles([])
         return
       }
+
+      if(!isGroupMode && !userId) {
+        setFiles([])
+        return
+      }
+
       setLoading(true)
       try{
-        const res = await api.get(`/files/with/${userId}`)
+        const res = isGroupMode
+          ? await api.get(`/groups/${groupObj._id}/files`)
+          : await api.get(`/files/with/${userId}`)
         if(!mounted.current) return
         setFiles(sortConversationFiles(res.data))
       }catch(err){
@@ -73,7 +81,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
     load()
     return ()=>{ mounted.current = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[userId, isGroupMode])
+  },[userId, isGroupMode, groupObj?._id])
 
   useEffect(() => {
     if (!listRef.current) return
@@ -144,7 +152,8 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
               }
             },
             (uploadId) => setCurrentUploadId(uploadId),
-            { encryptedAesKey, iv, fileHash }
+            { encryptedAesKey, iv, fileHash },
+            groupObj._id
           )
 
           sentCount += 1
@@ -157,6 +166,8 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
         setMsg(`File shared with ${sentCount} group member${sentCount > 1 ? 's' : ''}`)
         showNotification && showNotification(`Shared with ${sentCount} members`, 'success')
         setFileInput(null)
+        const groupFilesRes = await api.get(`/groups/${groupObj._id}/files`)
+        setFiles(sortConversationFiles(groupFilesRes.data))
         setTimeout(() => {
           setUploadProgress(0)
           setUploadSpeed(0)
@@ -405,16 +416,15 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
       </div>
 
       <div ref={listRef} className="flex-1 overflow-auto space-y-2 md:space-y-4 mb-3 px-1 md:px-2">
-        {isGroupMode && <div className="text-sm text-gray-500">Group mode does not show a single conversation feed. New upload will be shared to all accepted members.</div>}
-        {!isGroupMode && loading && <div className="text-sm text-gray-500">Loading files...</div>}
+        {loading && <div className="text-sm text-gray-500">Loading files...</div>}
         
-        {!isGroupMode && !loading && files.length > 0 && (
+        {!loading && files.length > 0 && (
           <div className="space-y-2">
             {files.map(f => (
               <FileCard 
                 key={f._id} 
                 file={f} 
-                isSent={f.sender._id === user?.id}
+                isSent={f.sender?._id === user?.id}
                 currentUserId={user?.id}
                 isDownloading={isDownloading}
                 downloadingFileId={downloadingFileId}
@@ -436,7 +446,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
           </div>
         )}
         
-        {!isGroupMode && files.length === 0 && !loading && <div className="text-sm text-gray-500">No files exchanged yet.</div>}
+        {files.length === 0 && !loading && <div className="text-sm text-gray-500">No files shared yet.</div>}
       </div>
 
       <div className="mt-2 border-t pt-2 sticky bottom-0 bg-white z-10 shadow-md">
