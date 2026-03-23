@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const uploadsBase = baseURL.replace(/\/api\/?$/, '')
@@ -17,6 +17,22 @@ function getInitials(name = '') {
 }
 
 export default function UsersList({ users, presenceMap = {}, selectedId, onSelect, loading }){
+  const sortedUsers = useMemo(() => {
+    const list = Array.isArray(users) ? [...users] : []
+    return list.sort((a, b) => {
+      const aActive = !!presenceMap[a._id]?.isActive
+      const bActive = !!presenceMap[b._id]?.isActive
+
+      if (aActive !== bActive) {
+        return aActive ? -1 : 1
+      }
+
+      const aName = (a.name || a.username || '').toLowerCase()
+      const bName = (b.name || b.username || '').toLowerCase()
+      return aName.localeCompare(bName)
+    })
+  }, [users, presenceMap])
+
   return (
     <div className="h-full flex flex-col bg-white min-h-0">
       <div className="font-semibold px-3 pt-3 pb-2 text-gray-800 border-b text-sm md:text-base">👥 Contacts</div>
@@ -24,7 +40,7 @@ export default function UsersList({ users, presenceMap = {}, selectedId, onSelec
       {!loading && (
         <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 contacts-scroll">
           <div className="space-y-1 px-2 py-2">
-            {users.map(u => {
+            {sortedUsers.map(u => {
               const isActive = !!presenceMap[u._id]?.isActive
               return (
               <button
@@ -57,7 +73,7 @@ export default function UsersList({ users, presenceMap = {}, selectedId, onSelec
               </button>
               )
             })}
-            {users.length === 0 && <div className="text-xs md:text-sm text-gray-500 px-3 py-4 text-center">No contacts yet. Search users to add friends!</div>}
+            {sortedUsers.length === 0 && <div className="text-xs md:text-sm text-gray-500 px-3 py-4 text-center">No contacts yet. Search users to add friends!</div>}
           </div>
         </div>
       )}
