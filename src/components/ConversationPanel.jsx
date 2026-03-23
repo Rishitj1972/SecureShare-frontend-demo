@@ -71,6 +71,8 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const currentUserId = user?.id || user?._id
   const ownerId = groupObj?.owner?._id || groupObj?.owner
   const isGroupOwner = isGroupMode && !!ownerId && String(ownerId) === String(currentUserId)
+  const currentGroupPhotoUrl = groupObj?.groupPhoto ? getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt) : ''
+  const visibleGroupPhotoPreview = removeGroupPhoto ? '' : (groupPhotoPreview || currentGroupPhotoUrl)
 
   const memberStatusByUserId = groupMembers.reduce((acc, member) => {
     const memberUserId = member?.user?._id || member?.user
@@ -163,10 +165,22 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
 
   // Initialize group photo preview when edit form opens
   useEffect(() => {
-    if (showEditGroup && groupObj?.groupPhoto) {
+    if (!showEditGroup) return
+    if (groupObj?.groupPhoto) {
       setGroupPhotoPreview(getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt))
+      return
     }
+    setGroupPhotoPreview('')
   }, [showEditGroup, groupObj?.groupPhoto, groupObj?.updatedAt])
+
+  const handleGroupPhotoChange = (e) => {
+    const file = e.target.files?.[0] || null
+    setGroupPhotoFile(file)
+    if (file) {
+      setGroupPhotoPreview(URL.createObjectURL(file))
+      setRemoveGroupPhoto(false)
+    }
+  }
 
   const toggleNewMember = (friendId) => {
     setSelectedNewMemberIds((prev) =>
@@ -695,20 +709,31 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
 
             <div>
               <label className="block text-xs text-gray-600 mb-1">Group photo</label>
-              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null
-                    setGroupPhotoFile(file)
-                    if (file) {
-                      setGroupPhotoPreview(URL.createObjectURL(file))
-                      setRemoveGroupPhoto(false)
-                    }
-                  }}
-                  className="text-xs"
-                />
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  {visibleGroupPhotoPreview ? (
+                    <img
+                      src={visibleGroupPhotoPreview}
+                      alt="Group photo preview"
+                      className="w-14 h-14 rounded-full object-cover border border-indigo-300"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-semibold text-indigo-700 border border-indigo-200">
+                      {getInitials(groupObj?.name || 'Group')}
+                    </div>
+                  )}
+
+                  <label className="px-3 py-1.5 text-xs md:text-sm bg-white border rounded cursor-pointer hover:bg-gray-50">
+                    Choose Photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleGroupPhotoChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
                 <label className="inline-flex items-center gap-1 text-xs text-gray-700">
                   <input
                     type="checkbox"
@@ -717,21 +742,14 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                       setRemoveGroupPhoto(e.target.checked)
                       if (e.target.checked) setGroupPhotoFile(null)
                         if (e.target.checked) setGroupPhotoPreview('')
+                      if (!e.target.checked && groupObj?.groupPhoto) {
+                        setGroupPhotoPreview(getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt))
+                      }
                       }}
                   />
                   Remove current photo
                 </label>
               </div>
-
-              {groupPhotoPreview && (
-                <div className="flex justify-center mt-2">
-                  <img
-                    src={groupPhotoPreview}
-                    alt="Group photo preview"
-                    className="w-16 h-16 rounded-full object-cover border border-indigo-300"
-                  />
-                </div>
-              )}
             </div>
 
             <div className="flex gap-2">
