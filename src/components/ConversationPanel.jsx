@@ -223,24 +223,39 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       return
     }
 
+    const currentName = (groupObj?.name || '').trim()
+    const currentAdminId = String(groupObj?.owner?._id || groupObj?.owner || '')
+    const nextAdminId = String(editingAdminId || '')
+
+    const hasPhotoChange = !!groupPhotoFile || removeGroupPhoto
+    const hasNameChange = trimmedName !== currentName
+    const hasAdminChange = !!nextAdminId && nextAdminId !== currentAdminId
+
+    if (!hasPhotoChange && !hasNameChange && !hasAdminChange) {
+      showNotification && showNotification('No changes to save', 'error')
+      return
+    }
+
     setIsSavingGroup(true)
     try {
-      // Update group photo first if needed (separate request)
+      // Update group photo first if needed
       if (groupPhotoFile) {
         const photoForm = new FormData()
         photoForm.append('groupPhoto', groupPhotoFile)
-        await api.put(`/groups/${groupObj._id}/photo`, photoForm)
+        await api.put(`/groups/${groupObj._id}/photo`, photoForm, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
       } else if (removeGroupPhoto) {
-        const removeForm = new FormData()
-        removeForm.append('removePhoto', 'true')
-        await api.put(`/groups/${groupObj._id}/photo`, removeForm)
+        await api.put(`/groups/${groupObj._id}/photo`, { removePhoto: true })
       }
 
-      // Then update group details (name/admin)
-      await api.put(`/groups/${groupObj._id}`, {
-        name: trimmedName,
-        adminId: editingAdminId || undefined
-      })
+      // Update metadata only when changed
+      if (hasNameChange || hasAdminChange) {
+        await api.put(`/groups/${groupObj._id}`, {
+          name: trimmedName,
+          adminId: hasAdminChange ? nextAdminId : undefined
+        })
+      }
 
       await onRefreshGroups?.()
 
