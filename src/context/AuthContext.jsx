@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import api from '../api/axios'
+import { generateRSAKeyPair, getPrivateKey, storePrivateKey } from '../utils/crypto'
 
 const AuthContext = createContext()
 
@@ -105,6 +106,20 @@ export function AuthProvider({ children }){
       
       localStorage.setItem('user', JSON.stringify(currentUser))
       localStorage.removeItem('logout_triggered')
+
+      // Ensure this browser has private key for the logged in user.
+      // If not present, generate and upload a replacement public key.
+      const existingPrivateKey = getPrivateKey(currentUser.id)
+      if (!existingPrivateKey) {
+        try {
+          const { publicKey, privateKey } = await generateRSAKeyPair()
+          await api.put('/users/profile/update', { rsaPublicKey: publicKey })
+          storePrivateKey(currentUser.id, privateKey)
+        } catch (keyErr) {
+          console.error('Key setup warning:', keyErr)
+        }
+      }
+
       setUser(currentUser)
       return currentUser
     } catch (error) {

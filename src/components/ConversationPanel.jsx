@@ -108,6 +108,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
       if (isGroupMode) {
         setMsg('Loading group members...')
         const membersRes = await api.get(`/groups/${groupObj._id}/members`)
+        const groupShareId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
         const acceptedMembers = (membersRes?.data?.members || [])
           .filter((member) => member.status === 'accepted')
           .map((member) => member.user)
@@ -153,7 +154,8 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
             },
             (uploadId) => setCurrentUploadId(uploadId),
             { encryptedAesKey, iv, fileHash },
-            groupObj._id
+            groupObj._id,
+            groupShareId
           )
 
           sentCount += 1
