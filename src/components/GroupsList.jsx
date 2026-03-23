@@ -174,6 +174,38 @@ export default function GroupsList({
           {loading && <div className="text-xs text-slate-500 px-3 py-3">Loading groups...</div>}
           {!loading && (
             <div className="flex-1 min-h-0 px-2 py-2 pr-1 overflow-y-auto border-b border-slate-200">
+              {(pendingInvites || []).length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[11px] font-semibold text-amber-700 px-1 pb-2">
+                    Pending Invites ({pendingInvites.length})
+                  </div>
+                  <div className="space-y-1.5">
+                    {pendingInvites.map((invite) => (
+                      <div key={invite.groupId} className="bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+                        <div className="text-xs font-semibold truncate text-slate-800">{invite.groupName}</div>
+                        <div className="text-[11px] text-slate-600 truncate">Owner: {invite.owner?.username || invite.owner?.email}</div>
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            className="flex-1 px-2 py-1.5 text-[11px] bg-emerald-600 text-white rounded-md hover:bg-emerald-700 font-medium transition"
+                            onClick={() => onRespondToInvite?.(invite.groupId, 'accept')}
+                            type="button"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            className="flex-1 px-2 py-1.5 text-[11px] bg-rose-600 text-white rounded-md hover:bg-rose-700 font-medium transition"
+                            onClick={() => onRespondToInvite?.(invite.groupId, 'reject')}
+                            type="button"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-b border-slate-200 mt-3 pt-1" />
+                </div>
+              )}
               <div className="text-[11px] font-semibold text-slate-500 px-1 pb-2 sticky top-0 bg-white/95 backdrop-blur z-10">
                 Your Groups
               </div>
@@ -226,41 +258,6 @@ export default function GroupsList({
               </div>
             </div>
           )}
-
-          <div className="p-2 bg-white/80">
-            <details className="rounded-xl border border-slate-200 bg-white shadow-sm group">
-              <summary className="px-3 py-2.5 text-xs font-semibold text-slate-700 cursor-pointer select-none flex items-center justify-between">
-                <span>Pending Invites ({pendingInvites?.length || 0})</span>
-                <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
-                <span className="text-[10px] text-slate-500 hidden group-open:inline">Collapse</span>
-              </summary>
-              <div className="px-3 pb-3 pt-1 max-h-32 overflow-y-auto border-t border-slate-100">
-                {(pendingInvites || []).length === 0 && <div className="text-xs text-slate-500">No pending invites</div>}
-                {(pendingInvites || []).map((invite) => (
-                  <div key={invite.groupId} className="bg-amber-50 border border-amber-100 rounded-xl p-2.5 mb-2">
-                    <div className="text-xs font-semibold truncate text-slate-800">{invite.groupName}</div>
-                    <div className="text-[11px] text-slate-600 truncate">Owner: {invite.owner?.username || invite.owner?.email}</div>
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        className="px-2 py-1 text-[11px] bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-                        onClick={() => onRespondToInvite?.(invite.groupId, 'accept')}
-                        type="button"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        className="px-2 py-1 text-[11px] bg-rose-600 text-white rounded-md hover:bg-rose-700"
-                        onClick={() => onRespondToInvite?.(invite.groupId, 'reject')}
-                        type="button"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </details>
-          </div>
         </>
       )}
     </div>
