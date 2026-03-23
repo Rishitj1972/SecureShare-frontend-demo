@@ -82,6 +82,8 @@ export default function Chat(){
     const refreshed = groups.find((group) => group._id === selectedGroup._id)
     if (refreshed) {
       setSelectedGroup(refreshed)
+    } else {
+      setSelectedGroup(null)
     }
   }, [groups, selectedGroup?._id])
 
@@ -155,6 +157,13 @@ export default function Chat(){
     }
   }
 
+  const handleGroupDeleted = async () => {
+    setSelectedGroup(null)
+    setLatestCreatedGroupId(null)
+    await loadGroups()
+    showNotification('Group deleted successfully', 'success')
+  }
+
   return (
     <div className="h-[calc(100vh-160px)] flex bg-gray-50">
       <div className="w-64">
@@ -216,6 +225,7 @@ export default function Chat(){
           groupObj={selectedGroup}
           friends={users}
           onRefreshGroups={loadGroups}
+          onGroupDeleted={handleGroupDeleted}
           showNotification={showNotification}
         />
       </div>

@@ -33,7 +33,7 @@ function sortConversationFiles(files = []) {
   return [...files].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 }
 
-export default function ConversationPanel({ userId, userObj, groupObj, friends = [], onRefreshGroups, showNotification }){
+export default function ConversationPanel({ userId, userObj, groupObj, friends = [], onRefreshGroups, onGroupDeleted, showNotification }){
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -61,6 +61,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const [groupPhotoFile, setGroupPhotoFile] = useState(null)
   const [groupPhotoPreview, setGroupPhotoPreview] = useState('')
   const [isSavingGroup, setIsSavingGroup] = useState(false)
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false)
   const mounted = useRef(true)
   const listRef = useRef(null)
   const { uploadFile, cancelUpload } = useChunkedUpload()
@@ -301,6 +302,22 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       showNotification && showNotification(err?.response?.data?.message || 'Failed to remove member', 'error')
     } finally {
       setRemovingMemberId(null)
+    }
+  }
+
+  const handleDeleteGroup = async () => {
+    if (!groupObj?._id || !isGroupOwner) return
+    const groupName = groupObj?.name || 'this group'
+    if (!window.confirm(`Delete ${groupName}? This will permanently remove all group files and members.`)) return
+
+    setIsDeletingGroup(true)
+    try {
+      await api.delete(`/groups/${groupObj._id}`)
+      await onGroupDeleted?.()
+    } catch (err) {
+      showNotification && showNotification(err?.response?.data?.message || 'Failed to delete group', 'error')
+    } finally {
+      setIsDeletingGroup(false)
     }
   }
 
@@ -650,6 +667,13 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                   className="px-3 py-1 text-[11px] md:text-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded font-medium transition-colors"
                 >
                   {showEditGroup ? 'Close Edit Group' : 'Edit Group'}
+                </button>
+                <button
+                  onClick={handleDeleteGroup}
+                  disabled={isDeletingGroup}
+                  className="px-3 py-1 text-[11px] md:text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded font-medium transition-colors disabled:opacity-50"
+                >
+                  {isDeletingGroup ? 'Deleting...' : 'Delete Group'}
                 </button>
               </>
             )}
