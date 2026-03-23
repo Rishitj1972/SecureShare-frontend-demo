@@ -54,6 +54,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const [loadingGroupMembers, setLoadingGroupMembers] = useState(false)
   const [selectedNewMemberIds, setSelectedNewMemberIds] = useState([])
   const [isAddingMembers, setIsAddingMembers] = useState(false)
+  const [removingMemberId, setRemovingMemberId] = useState(null)
   const [showEditGroup, setShowEditGroup] = useState(false)
   const [editingGroupName, setEditingGroupName] = useState('')
   const [editingAdminId, setEditingAdminId] = useState('')
@@ -88,6 +89,19 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
 
   const acceptedGroupMembers = groupMembers
     .filter((member) => member.status === 'accepted' && member.user?._id)
+    .map((member) => ({
+      id: member.user._id,
+      name: member.user.username || member.user.email,
+      email: member.user.email
+    }))
+
+  const removableMembers = groupMembers
+    .filter((member) => {
+      const memberUserId = member?.user?._id || member?.user
+      if (!memberUserId) return false
+      if (member.status !== 'accepted') return false
+      return String(memberUserId) !== String(ownerId)
+    })
     .map((member) => ({
       id: member.user._id,
       name: member.user.username || member.user.email,
@@ -266,6 +280,27 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       showNotification && showNotification(err?.response?.data?.message || 'Failed to update group', 'error')
     } finally {
       setIsSavingGroup(false)
+    }
+  }
+
+  const handleRemoveMemberFromGroup = async (member) => {
+    if (!groupObj?._id || !member?.id) return
+    const memberName = member.name || member.email || 'this member'
+    if (!window.confirm(`Remove ${memberName} from this group?`)) return
+
+    setRemovingMemberId(member.id)
+    try {
+      await api.delete(`/groups/${groupObj._id}/members/${member.id}`)
+      const [membersRes] = await Promise.all([
+        api.get(`/groups/${groupObj._id}/members`),
+        onRefreshGroups?.()
+      ])
+      setGroupMembers(Array.isArray(membersRes?.data?.members) ? membersRes.data.members : [])
+      showNotification && showNotification('Member removed from group', 'success')
+    } catch (err) {
+      showNotification && showNotification(err?.response?.data?.message || 'Failed to remove member', 'error')
+    } finally {
+      setRemovingMemberId(null)
     }
   }
 
@@ -684,6 +719,31 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                 </div>
               </>
             )}
+
+            <div className="mt-3 border-t border-emerald-200 pt-3">
+              <div className="text-xs md:text-sm font-semibold text-emerald-800 mb-2">Remove users from this group</div>
+              <div className="max-h-36 overflow-auto border rounded p-2 bg-white">
+                {removableMembers.length === 0 && (
+                  <div className="text-xs text-gray-500">No removable members in this group.</div>
+                )}
+                {removableMembers.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between gap-2 py-1.5">
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium truncate text-gray-800">{member.name}</div>
+                      {member.email && <div className="text-[11px] text-gray-500 truncate">{member.email}</div>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMemberFromGroup(member)}
+                      disabled={!!removingMemberId}
+                      className="px-2.5 py-1 text-[11px] bg-red-100 hover:bg-red-200 text-red-700 rounded disabled:opacity-50"
+                    >
+                      {removingMemberId === member.id ? 'Removing...' : 'Remove'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -786,16 +846,28 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                 isSent={f.sender?._id === user?.id}
                 isGroupMode={isGroupMode}
                 currentUserId={user?.id}
+                canDelete={!isGroupMode || isGroupOwner}
                 isDownloading={isDownloading}
                 downloadingFileId={downloadingFileId}
                 downloadProgress={downloadProgress}
                 downloadStage={downloadStage}
                 onDownload={() => onDownload(f._id, f)} 
                 onDelete={async (id) => {
+                  if (isGroupMode && !isGroupOwner) {
+                    showNotification && showNotification('Only the group admin can delete group files', 'error')
+                    return
+                  }
+
                   if (!window.confirm('Delete this file? This cannot be undone.')) return
                   try{
-                    await api.delete(`/files/${id}`)
-                    setFiles(prev => prev.filter(x => x._id !== id))
+                    if (isGroupMode && groupObj?._id && isGroupOwner) {
+                      await api.delete(`/groups/${groupObj._id}/files/${id}`)
+                      const refreshed = await api.get(`/groups/${groupObj._id}/files`)
+                      setFiles(sortConversationFiles(refreshed.data))
+                    } else {
+                      await api.delete(`/files/${id}`)
+                      setFiles(prev => prev.filter(x => x._id !== id))
+                    }
                     showNotification && showNotification('File deleted', 'success')
                   }catch(err){
                     showNotification && showNotification(err?.response?.data?.message || 'Delete failed', 'error')

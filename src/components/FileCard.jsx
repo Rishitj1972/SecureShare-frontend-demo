@@ -87,7 +87,7 @@ function formatShortTime(value) {
   })
 }
 
-export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMode = false, currentUserId, isDownloading, downloadingFileId, downloadProgress, downloadStage }){
+export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMode = false, currentUserId, canDelete = true, isDownloading, downloadingFileId, downloadProgress, downloadStage }){
   const name = file.originalFileName || file.originalName || 'file'
   const sizeFormatted = formatFileSize(file.fileSize)
   const time = file.createdAt ? formatShortTime(file.createdAt) : ''
@@ -154,25 +154,27 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
               </button>
             )}
 
-            <Menu as="div" className="relative">
-              <Menu.Button className="p-1.5 rounded-md hover:bg-slate-100 transition-colors">
-                <EllipsisVerticalIcon className="w-4 h-4 text-slate-600" />
-              </Menu.Button>
-              <Menu.Items className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg p-1 z-20">
-                <Menu.Item>
-                  {({active}) => (
-                    <button
-                      onClick={() => onDelete && onDelete(file._id)}
-                      className={`w-full text-left px-3 py-2 rounded text-sm ${
-                        active ? 'bg-red-50 text-red-600' : 'text-gray-700'
-                      }`}
-                    >
-                      🗑️ Delete
-                    </button>
-                  )}
-                </Menu.Item>
-              </Menu.Items>
-            </Menu>
+            {canDelete && (
+              <Menu as="div" className="relative">
+                <Menu.Button className="p-1.5 rounded-md hover:bg-slate-100 transition-colors">
+                  <EllipsisVerticalIcon className="w-4 h-4 text-slate-600" />
+                </Menu.Button>
+                <Menu.Items className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg p-1 z-20">
+                  <Menu.Item>
+                    {({active}) => (
+                      <button
+                        onClick={() => onDelete && onDelete(file._id)}
+                        className={`w-full text-left px-3 py-2 rounded text-sm ${
+                          active ? 'bg-red-50 text-red-600' : 'text-gray-700'
+                        }`}
+                      >
+                        🗑️ Delete
+                      </button>
+                    )}
+                  </Menu.Item>
+                </Menu.Items>
+              </Menu>
+            )}
           </div>
         </div>
       </div>
@@ -243,25 +245,27 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
               )
             )}
             
-            <Menu as="div" className="relative">
-              <Menu.Button className="p-2 rounded-lg hover:bg-white/50 transition-colors">
-                <EllipsisVerticalIcon className="w-5 h-5 text-gray-600" />
-              </Menu.Button>
-              <Menu.Items className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-1 z-20">
-                <Menu.Item>
-                  {({active}) => (
-                    <button 
-                      onClick={() => onDelete && onDelete(file._id)} 
-                      className={`w-full text-left px-3 py-2 rounded text-sm ${
-                        active ? 'bg-red-50 text-red-600' : 'text-gray-700'
-                      }`}
-                    >
-                      🗑️ Delete
-                    </button>
-                  )}
-                </Menu.Item>
-              </Menu.Items>
-            </Menu>
+            {canDelete && (
+              <Menu as="div" className="relative">
+                <Menu.Button className="p-2 rounded-lg hover:bg-white/50 transition-colors">
+                  <EllipsisVerticalIcon className="w-5 h-5 text-gray-600" />
+                </Menu.Button>
+                <Menu.Items className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-1 z-20">
+                  <Menu.Item>
+                    {({active}) => (
+                      <button 
+                        onClick={() => onDelete && onDelete(file._id)} 
+                        className={`w-full text-left px-3 py-2 rounded text-sm ${
+                          active ? 'bg-red-50 text-red-600' : 'text-gray-700'
+                        }`}
+                      >
+                        🗑️ Delete
+                      </button>
+                    )}
+                  </Menu.Item>
+                </Menu.Items>
+              </Menu>
+            )}
           </div>
         </div>
       </div>
