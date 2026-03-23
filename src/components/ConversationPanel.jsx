@@ -745,7 +745,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
               </div>
             </div>
 
-            <div className="sticky bottom-0 -mx-3 px-3 py-3 bg-indigo-50/95 backdrop-blur supports-[backdrop-filter]:bg-indigo-50/80 border-t border-indigo-200 rounded-b-lg">
+            <div className="mt-2 -mx-3 px-3 py-3 bg-indigo-50 border-t border-indigo-200 rounded-b-lg">
               <div className="flex flex-col md:flex-row gap-3">
               <button
                 type="button"
