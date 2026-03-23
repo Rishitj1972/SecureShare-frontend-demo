@@ -58,6 +58,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const [editingGroupName, setEditingGroupName] = useState('')
   const [editingAdminId, setEditingAdminId] = useState('')
   const [groupPhotoFile, setGroupPhotoFile] = useState(null)
+  const [groupPhotoPreview, setGroupPhotoPreview] = useState('')
   const [removeGroupPhoto, setRemoveGroupPhoto] = useState(false)
   const [isSavingGroup, setIsSavingGroup] = useState(false)
   const mounted = useRef(true)
@@ -132,6 +133,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
     setShowEditGroup(false)
     setSelectedNewMemberIds([])
     setGroupPhotoFile(null)
+    setGroupPhotoPreview('')
     setRemoveGroupPhoto(false)
 
     if (!isGroupMode || !groupObj?._id) {
@@ -158,6 +160,13 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
 
     loadGroupMembers()
   }, [isGroupMode, groupObj?._id])
+
+  // Initialize group photo preview when edit form opens
+  useEffect(() => {
+    if (showEditGroup && groupObj?.groupPhoto) {
+      setGroupPhotoPreview(getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt))
+    }
+  }, [showEditGroup, groupObj?.groupPhoto, groupObj?.updatedAt])
 
   const toggleNewMember = (friendId) => {
     setSelectedNewMemberIds((prev) =>
@@ -225,6 +234,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       setGroupMembers(Array.isArray(membersRes?.data?.members) ? membersRes.data.members : [])
 
       setGroupPhotoFile(null)
+      setGroupPhotoPreview('')
       setRemoveGroupPhoto(false)
       setShowEditGroup(false)
       showNotification && showNotification('Group updated successfully', 'success')
@@ -692,7 +702,10 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null
                     setGroupPhotoFile(file)
-                    if (file) setRemoveGroupPhoto(false)
+                    if (file) {
+                      setGroupPhotoPreview(URL.createObjectURL(file))
+                      setRemoveGroupPhoto(false)
+                    }
                   }}
                   className="text-xs"
                 />
@@ -703,11 +716,22 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                     onChange={(e) => {
                       setRemoveGroupPhoto(e.target.checked)
                       if (e.target.checked) setGroupPhotoFile(null)
-                    }}
+                        if (e.target.checked) setGroupPhotoPreview('')
+                      }}
                   />
                   Remove current photo
                 </label>
               </div>
+
+              {groupPhotoPreview && (
+                <div className="flex justify-center mt-2">
+                  <img
+                    src={groupPhotoPreview}
+                    alt="Group photo preview"
+                    className="w-16 h-16 rounded-full object-cover border border-indigo-300"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2">
@@ -725,7 +749,8 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                   setShowEditGroup(false)
                   setGroupPhotoFile(null)
                   setRemoveGroupPhoto(false)
-                }}
+                    setGroupPhotoPreview('')
+                  }}
                 disabled={isSavingGroup}
                 className="px-3 py-1.5 text-xs md:text-sm bg-gray-200 text-gray-700 rounded"
               >
