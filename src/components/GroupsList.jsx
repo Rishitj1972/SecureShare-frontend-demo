@@ -87,85 +87,9 @@ export default function GroupsList({
         </div>
       </div>
 
-      <form onSubmit={submitCreate} className="p-3 border-b border-slate-200">
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 space-y-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-slate-800">Create Group</div>
-              <div className="text-[11px] text-slate-500">Pick a name and invite teammates</div>
-            </div>
-            <div className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
-              {selectedCount} selected
-            </div>
-          </div>
-
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Team alpha, Design pod, Weekend squad..."
-            className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-300"
-            maxLength={80}
-          />
-
-          <div className="border border-slate-200 rounded-xl p-2.5 bg-slate-50 max-h-32 overflow-y-auto">
-            {(friends || []).length === 0 && <div className="text-xs text-slate-500">No friends to invite yet</div>}
-            <div className="space-y-1">
-              {(friends || []).map((friend) => (
-                <label
-                  key={friend._id}
-                  className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg hover:bg-white cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedFriendIds.includes(friend._id)}
-                    onChange={() => toggleFriend(friend._id)}
-                  />
-                  <span className="truncate text-slate-700">{friend.username || friend.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isCreating || !canCreate}
-            className="w-full px-3 py-2.5 text-sm bg-slate-900 text-white rounded-xl disabled:opacity-50 hover:bg-slate-800 font-medium"
-          >
-            {isCreating ? 'Creating...' : 'Create Group'}
-          </button>
-        </div>
-      </form>
-
-      <div className="px-3 py-2 border-b border-slate-200 bg-white/80">
-        <div className="text-xs font-semibold text-slate-600 mb-2">Pending Invites</div>
-        {(pendingInvites || []).length === 0 && <div className="text-xs text-slate-500">No pending invites</div>}
-        {(pendingInvites || []).map((invite) => (
-          <div key={invite.groupId} className="bg-amber-50 border border-amber-100 rounded-xl p-2.5 mb-2">
-            <div className="text-xs font-semibold truncate text-slate-800">{invite.groupName}</div>
-            <div className="text-[11px] text-slate-600 truncate">Owner: {invite.owner?.username || invite.owner?.email}</div>
-            <div className="flex gap-2 mt-2">
-              <button
-                className="px-2 py-1 text-[11px] bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-                onClick={() => onRespondToInvite?.(invite.groupId, 'accept')}
-                type="button"
-              >
-                Accept
-              </button>
-              <button
-                className="px-2 py-1 text-[11px] bg-rose-600 text-white rounded-md hover:bg-rose-700"
-                onClick={() => onRespondToInvite?.(invite.groupId, 'reject')}
-                type="button"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {loading && <div className="text-xs text-slate-500 px-3 py-3">Loading groups...</div>}
       {!loading && (
-        <div className="flex-1 min-h-0 px-2 py-2 pr-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 px-2 py-2 pr-1 overflow-y-auto border-b border-slate-200">
           <div className="text-[11px] font-semibold text-slate-500 px-1 pb-2 sticky top-0 bg-white/95 backdrop-blur z-10">
             Your Groups
           </div>
@@ -218,6 +142,87 @@ export default function GroupsList({
           </div>
         </div>
       )}
+
+      <div className="p-2 bg-white/80">
+        <details className="rounded-xl border border-slate-200 bg-white shadow-sm" open>
+          <summary className="px-3 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+            Group Creation
+          </summary>
+          <form onSubmit={submitCreate} className="px-3 pb-3 space-y-3">
+            <div className="text-[11px] text-slate-500">Pick a name and invite teammates</div>
+
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Team alpha, Design pod, Weekend squad..."
+              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-300"
+              maxLength={80}
+            />
+
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500">Invite Friends</span>
+              <span className="font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">{selectedCount} selected</span>
+            </div>
+            <div className="border border-slate-200 rounded-xl p-2.5 bg-slate-50 max-h-24 overflow-y-auto">
+              {(friends || []).length === 0 && <div className="text-xs text-slate-500">No friends to invite yet</div>}
+              <div className="space-y-1">
+                {(friends || []).map((friend) => (
+                  <label
+                    key={friend._id}
+                    className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg hover:bg-white cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedFriendIds.includes(friend._id)}
+                      onChange={() => toggleFriend(friend._id)}
+                    />
+                    <span className="truncate text-slate-700">{friend.username || friend.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isCreating || !canCreate}
+              className="w-full px-3 py-2.5 text-sm bg-slate-900 text-white rounded-xl disabled:opacity-50 hover:bg-slate-800 font-medium"
+            >
+              {isCreating ? 'Creating...' : 'Create Group'}
+            </button>
+          </form>
+        </details>
+
+        <details className="mt-2 rounded-xl border border-slate-200 bg-white shadow-sm" open>
+          <summary className="px-3 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+            Pending Invites ({pendingInvites?.length || 0})
+          </summary>
+          <div className="px-3 pb-3 max-h-32 overflow-y-auto">
+            {(pendingInvites || []).length === 0 && <div className="text-xs text-slate-500">No pending invites</div>}
+            {(pendingInvites || []).map((invite) => (
+              <div key={invite.groupId} className="bg-amber-50 border border-amber-100 rounded-xl p-2.5 mb-2">
+                <div className="text-xs font-semibold truncate text-slate-800">{invite.groupName}</div>
+                <div className="text-[11px] text-slate-600 truncate">Owner: {invite.owner?.username || invite.owner?.email}</div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    className="px-2 py-1 text-[11px] bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+                    onClick={() => onRespondToInvite?.(invite.groupId, 'accept')}
+                    type="button"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    className="px-2 py-1 text-[11px] bg-rose-600 text-white rounded-md hover:bg-rose-700"
+                    onClick={() => onRespondToInvite?.(invite.groupId, 'reject')}
+                    type="button"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+      </div>
     </div>
   );
 }

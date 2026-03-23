@@ -54,8 +54,10 @@ export default function Chat(){
       api.get('/groups/invitations/pending')
     ])
 
-    setGroups(Array.isArray(groupsRes.data) ? groupsRes.data : [])
+    const nextGroups = Array.isArray(groupsRes.data) ? groupsRes.data : []
+    setGroups(nextGroups)
     setPendingInvites(Array.isArray(invitesRes.data) ? invitesRes.data : [])
+    return nextGroups
   }
 
   useEffect(()=>{
@@ -135,7 +137,12 @@ export default function Chat(){
       const res = await api.post('/groups', { name, memberIds })
       const createdGroupId = res?.data?.groupId || null
       setLatestCreatedGroupId(createdGroupId)
-      await loadGroups()
+      const latestGroups = await loadGroups()
+      const createdGroup = latestGroups.find((group) => group._id === createdGroupId)
+      if (createdGroup) {
+        setSelectedGroup(createdGroup)
+        setSelectedFriend(null)
+      }
       showNotification('Group created successfully', 'success')
       setMode('groups')
     } catch (err) {
