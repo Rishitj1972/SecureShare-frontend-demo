@@ -658,22 +658,50 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
               <>
                 <button
                   onClick={() => setShowAddMembers((prev) => !prev)}
-                  className="px-3 py-1 text-[11px] md:text-sm bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded font-medium transition-colors"
+                  title={showAddMembers ? 'Close Add Users' : 'Add Users'}
+                  aria-label={showAddMembers ? 'Close Add Users' : 'Add Users'}
+                  className="w-9 h-9 inline-flex items-center justify-center bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-md font-medium transition-colors"
                 >
-                  {showAddMembers ? 'Close Add Users' : 'Add Users'}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <path d="M20 8v6" />
+                    <path d="M17 11h6" />
+                  </svg>
                 </button>
                 <button
                   onClick={() => setShowEditGroup((prev) => !prev)}
-                  className="px-3 py-1 text-[11px] md:text-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded font-medium transition-colors"
+                  title={showEditGroup ? 'Close Edit Group' : 'Edit Group'}
+                  aria-label={showEditGroup ? 'Close Edit Group' : 'Edit Group'}
+                  className="w-9 h-9 inline-flex items-center justify-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-md font-medium transition-colors"
                 >
-                  {showEditGroup ? 'Close Edit Group' : 'Edit Group'}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                  </svg>
                 </button>
                 <button
                   onClick={handleDeleteGroup}
                   disabled={isDeletingGroup}
-                  className="px-3 py-1 text-[11px] md:text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded font-medium transition-colors disabled:opacity-50"
+                  title={isDeletingGroup ? 'Deleting Group' : 'Delete Group'}
+                  aria-label={isDeletingGroup ? 'Deleting Group' : 'Delete Group'}
+                  className="w-9 h-9 inline-flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-700 rounded-md font-medium transition-colors disabled:opacity-50"
                 >
-                  {isDeletingGroup ? 'Deleting...' : 'Delete Group'}
+                  {isDeletingGroup ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 animate-pulse">
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4h8v2" />
+                      <path d="M19 6l-1 14H6L5 6" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4h8v2" />
+                      <path d="M19 6l-1 14H6L5 6" />
+                      <path d="M10 11v6" />
+                      <path d="M14 11v6" />
+                    </svg>
+                  )}
                 </button>
               </>
             )}
