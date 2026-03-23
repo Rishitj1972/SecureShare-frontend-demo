@@ -28,7 +28,7 @@ function sortConversationFiles(files = []) {
   return [...files].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 }
 
-export default function ConversationPanel({ userId, userObj, showNotification }){
+export default function ConversationPanel({ userId, userObj, groupObj, showNotification }){
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -50,11 +50,15 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const { encryptFileForUpload, getReceiverPublicKey } = useFileEncryption()
   const { downloadAndDecrypt } = useFileDecryption()
   const { user } = useAuth()
+  const isGroupMode = !!groupObj
 
   useEffect(()=>{
     mounted.current = true
     const load = async () => {
-      if(!userId) return
+      if(!userId || isGroupMode) {
+        setFiles([])
+        return
+      }
       setLoading(true)
       try{
         const res = await api.get(`/files/with/${userId}`)
@@ -69,7 +73,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
     load()
     return ()=>{ mounted.current = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[userId])
+  },[userId, isGroupMode])
 
   useEffect(() => {
     if (!listRef.current) return
@@ -79,7 +83,8 @@ export default function ConversationPanel({ userId, userObj, showNotification })
   const submit = async (e) => {
     e && e.preventDefault && e.preventDefault()
     if(!fileInput) return setMsg('Please select a file')
-    if(!userId) return setMsg('Please select a user')
+    if(!userId && !isGroupMode) return setMsg('Please select a user')
+    if(isGroupMode && !groupObj?._id) return setMsg('Please select a group')
     if(isUploading) return setMsg('Upload already in progress')
     
     setIsUploading(true)
@@ -92,6 +97,75 @@ export default function ConversationPanel({ userId, userObj, showNotification })
     let lastUpdateTime = startTime
     
     try{
+      if (isGroupMode) {
+        setMsg('Loading group members...')
+        const membersRes = await api.get(`/groups/${groupObj._id}/members`)
+        const acceptedMembers = (membersRes?.data?.members || [])
+          .filter((member) => member.status === 'accepted')
+          .map((member) => member.user)
+          .filter((memberUser) => memberUser?._id && memberUser._id !== user?.id)
+
+        if (acceptedMembers.length === 0) {
+          throw new Error('No accepted members available in this group')
+        }
+
+        let sentCount = 0
+        for (let i = 0; i < acceptedMembers.length; i += 1) {
+          const receiver = acceptedMembers[i]
+
+          setMsg(`Encrypting for ${receiver.username || receiver.email} (${i + 1}/${acceptedMembers.length})...`)
+          setIsEncrypting(true)
+          const receiverPublicKey = await getReceiverPublicKey(receiver._id)
+          if (!receiverPublicKey) {
+            setIsEncrypting(false)
+            continue
+          }
+
+          const { encryptedFile, encryptedAesKey, iv, fileHash } = await encryptFileForUpload(fileInput, receiverPublicKey)
+          setIsEncrypting(false)
+
+          setMsg(`Uploading to ${receiver.username || receiver.email} (${i + 1}/${acceptedMembers.length})...`)
+
+          await uploadFile(
+            encryptedFile,
+            receiver._id,
+            (progress) => {
+              const normalizedProgress = Math.max(0, Math.min(100, Math.round(progress)))
+              const combined = Math.round(((i + normalizedProgress / 100) / acceptedMembers.length) * 100)
+              setUploadProgress((prev) => Math.max(prev, combined))
+
+              const now = Date.now()
+              const elapsed = (now - startTime) / 1000
+              setElapsedTime(Math.round(elapsed))
+              if (elapsed > 0.5 && (now - lastUpdateTime) >= 500) {
+                const aggregateBytes = ((i + normalizedProgress / 100) / acceptedMembers.length) * (fileInput.size * acceptedMembers.length)
+                setUploadSpeed(aggregateBytes / elapsed)
+                lastUpdateTime = now
+              }
+            },
+            (uploadId) => setCurrentUploadId(uploadId),
+            { encryptedAesKey, iv, fileHash }
+          )
+
+          sentCount += 1
+        }
+
+        if (sentCount === 0) {
+          throw new Error('Could not send file to any group members')
+        }
+
+        setMsg(`File shared with ${sentCount} group member${sentCount > 1 ? 's' : ''}`)
+        showNotification && showNotification(`Shared with ${sentCount} members`, 'success')
+        setFileInput(null)
+        setTimeout(() => {
+          setUploadProgress(0)
+          setUploadSpeed(0)
+          setElapsedTime(0)
+          setMsg('')
+        }, 2000)
+        return
+      }
+
       // Step 1: Get receiver's public key
       setMsg('🔐 Fetching encryption key...')
       setIsEncrypting(true)
@@ -154,6 +228,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       setMsg(errorMsg)
       showNotification && showNotification(errorMsg, 'error')
     }finally{
+      setIsEncrypting(false)
       setIsUploading(false)
       setCurrentUploadId(null)
     }
@@ -302,10 +377,10 @@ export default function ConversationPanel({ userId, userObj, showNotification })
               <div className="w-10 h-10 rounded-full bg-gray-100" />
             )}
             <div className="min-w-0">
-              <div className="font-semibold text-base md:text-base truncate">{userObj ? `${userObj.name || userObj.username}` : 'Select a user'}</div>
+              <div className="font-semibold text-base md:text-base truncate">{isGroupMode ? (groupObj?.name || 'Select a group') : (userObj ? `${userObj.name || userObj.username}` : 'Select a user')}</div>
               <div className="flex items-center gap-2 text-[11px] md:text-xs text-gray-500">
-                <span>Share files securely</span>
-                {userObj && (
+                <span>{isGroupMode ? 'Share to accepted group members' : 'Share files securely'}</span>
+                {!isGroupMode && userObj && (
                   <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${userObj.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${userObj.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
                     {userObj.isActive ? 'Active' : 'Inactive'}
@@ -316,7 +391,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="text-[11px] md:text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono whitespace-nowrap">v5.0.0 🔐 E2EE</div>
-            {userObj && (
+            {!isGroupMode && userObj && (
               <button
                 onClick={handleUnfriend}
                 disabled={isUnfriending}
@@ -330,9 +405,10 @@ export default function ConversationPanel({ userId, userObj, showNotification })
       </div>
 
       <div ref={listRef} className="flex-1 overflow-auto space-y-2 md:space-y-4 mb-3 px-1 md:px-2">
-        {loading && <div className="text-sm text-gray-500">Loading files...</div>}
+        {isGroupMode && <div className="text-sm text-gray-500">Group mode does not show a single conversation feed. New upload will be shared to all accepted members.</div>}
+        {!isGroupMode && loading && <div className="text-sm text-gray-500">Loading files...</div>}
         
-        {!loading && files.length > 0 && (
+        {!isGroupMode && !loading && files.length > 0 && (
           <div className="space-y-2">
             {files.map(f => (
               <FileCard 
@@ -360,7 +436,7 @@ export default function ConversationPanel({ userId, userObj, showNotification })
           </div>
         )}
         
-        {files.length === 0 && !loading && <div className="text-sm text-gray-500">No files exchanged yet.</div>}
+        {!isGroupMode && files.length === 0 && !loading && <div className="text-sm text-gray-500">No files exchanged yet.</div>}
       </div>
 
       <div className="mt-2 border-t pt-2 sticky bottom-0 bg-white z-10 shadow-md">
