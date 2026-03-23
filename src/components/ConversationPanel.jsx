@@ -709,30 +709,30 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
 
             <div>
               <label className="block text-xs text-gray-600 mb-1">Group photo</label>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  {visibleGroupPhotoPreview ? (
-                    <img
-                      src={visibleGroupPhotoPreview}
-                      alt="Group photo preview"
-                      className="w-14 h-14 rounded-full object-cover border border-indigo-300"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-semibold text-indigo-700 border border-indigo-200">
-                      {getInitials(groupObj?.name || 'Group')}
-                    </div>
-                  )}
+              <div className="flex flex-col items-center gap-3 rounded-lg border border-indigo-100 bg-white p-3">
+                {visibleGroupPhotoPreview ? (
+                  <img
+                    src={visibleGroupPhotoPreview}
+                    alt="Group photo preview"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-blue-300"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-2xl font-semibold text-gray-600 border-4 border-gray-300">
+                    {getInitials(groupObj?.name || 'Group')}
+                  </div>
+                )}
 
-                  <label className="px-3 py-1.5 text-xs md:text-sm bg-white border rounded cursor-pointer hover:bg-gray-50">
-                    Choose Photo
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleGroupPhotoChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleGroupPhotoChange}
+                    className="hidden"
+                  />
+                  <span className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 inline-block cursor-pointer font-medium text-sm">
+                    Change Photo
+                  </span>
+                </label>
 
                 <label className="inline-flex items-center gap-1 text-xs text-gray-700">
                   <input
@@ -740,12 +740,14 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                     checked={removeGroupPhoto}
                     onChange={(e) => {
                       setRemoveGroupPhoto(e.target.checked)
-                      if (e.target.checked) setGroupPhotoFile(null)
-                        if (e.target.checked) setGroupPhotoPreview('')
+                      if (e.target.checked) {
+                        setGroupPhotoFile(null)
+                        setGroupPhotoPreview('')
+                      }
                       if (!e.target.checked && groupObj?.groupPhoto) {
                         setGroupPhotoPreview(getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt))
                       }
-                      }}
+                    }}
                   />
                   Remove current photo
                 </label>
@@ -767,8 +769,8 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                   setShowEditGroup(false)
                   setGroupPhotoFile(null)
                   setRemoveGroupPhoto(false)
-                    setGroupPhotoPreview('')
-                  }}
+                  setGroupPhotoPreview('')
+                }}
                 disabled={isSavingGroup}
                 className="px-3 py-1.5 text-xs md:text-sm bg-gray-200 text-gray-700 rounded"
               >
