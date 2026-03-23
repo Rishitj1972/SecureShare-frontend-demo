@@ -49,6 +49,12 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const [loadingGroupMembers, setLoadingGroupMembers] = useState(false)
   const [selectedNewMemberIds, setSelectedNewMemberIds] = useState([])
   const [isAddingMembers, setIsAddingMembers] = useState(false)
+  const [showEditGroup, setShowEditGroup] = useState(false)
+  const [editingGroupName, setEditingGroupName] = useState('')
+  const [editingAdminId, setEditingAdminId] = useState('')
+  const [groupPhotoFile, setGroupPhotoFile] = useState(null)
+  const [removeGroupPhoto, setRemoveGroupPhoto] = useState(false)
+  const [isSavingGroup, setIsSavingGroup] = useState(false)
   const mounted = useRef(true)
   const listRef = useRef(null)
   const { uploadFile, cancelUpload } = useChunkedUpload()
@@ -71,6 +77,14 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
     const status = memberStatusByUserId[String(friend._id)]
     return status !== 'accepted' && status !== 'pending'
   })
+
+  const acceptedGroupMembers = groupMembers
+    .filter((member) => member.status === 'accepted' && member.user?._id)
+    .map((member) => ({
+      id: member.user._id,
+      name: member.user.username || member.user.email,
+      email: member.user.email
+    }))
 
   useEffect(()=>{
     mounted.current = true
@@ -110,12 +124,20 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
 
   useEffect(() => {
     setShowAddMembers(false)
+    setShowEditGroup(false)
     setSelectedNewMemberIds([])
+    setGroupPhotoFile(null)
+    setRemoveGroupPhoto(false)
 
     if (!isGroupMode || !groupObj?._id) {
       setGroupMembers([])
+      setEditingGroupName('')
+      setEditingAdminId('')
       return
     }
+
+    setEditingGroupName(groupObj?.name || '')
+    setEditingAdminId(String(groupObj?.owner?._id || groupObj?.owner || ''))
 
     const loadGroupMembers = async () => {
       setLoadingGroupMembers(true)
@@ -161,6 +183,48 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       showNotification && showNotification(err?.response?.data?.message || 'Failed to add members', 'error')
     } finally {
       setIsAddingMembers(false)
+    }
+  }
+
+  const handleSaveGroup = async () => {
+    if (!groupObj?._id) return
+
+    const trimmedName = editingGroupName.trim()
+    if (!trimmedName) {
+      showNotification && showNotification('Group name cannot be empty', 'error')
+      return
+    }
+
+    setIsSavingGroup(true)
+    try {
+      await api.put(`/groups/${groupObj._id}`, {
+        name: trimmedName,
+        adminId: editingAdminId || undefined
+      })
+
+      if (groupPhotoFile) {
+        const photoForm = new FormData()
+        photoForm.append('groupPhoto', groupPhotoFile)
+        await api.put(`/groups/${groupObj._id}/photo`, photoForm)
+      } else if (removeGroupPhoto) {
+        const removeForm = new FormData()
+        removeForm.append('removePhoto', 'true')
+        await api.put(`/groups/${groupObj._id}/photo`, removeForm)
+      }
+
+      await onRefreshGroups?.()
+
+      const membersRes = await api.get(`/groups/${groupObj._id}/members`)
+      setGroupMembers(Array.isArray(membersRes?.data?.members) ? membersRes.data.members : [])
+
+      setGroupPhotoFile(null)
+      setRemoveGroupPhoto(false)
+      setShowEditGroup(false)
+      showNotification && showNotification('Group updated successfully', 'success')
+    } catch (err) {
+      showNotification && showNotification(err?.response?.data?.message || 'Failed to update group', 'error')
+    } finally {
+      setIsSavingGroup(false)
     }
   }
 
@@ -450,7 +514,19 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       <div className="border-b pb-3 mb-3">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-0">
           <div className="flex items-center gap-3 min-w-0">
-            {userObj ? (
+            {isGroupMode ? (
+              groupObj?.groupPhoto ? (
+                <img
+                  src={getPhotoUrl(groupObj.groupPhoto)}
+                  alt={groupObj?.name || 'Group'}
+                  className="w-10 h-10 rounded-full object-cover border"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-semibold text-indigo-700">
+                  {getInitials(groupObj?.name || 'Group')}
+                </div>
+              )
+            ) : userObj ? (
               userObj.profilePhoto ? (
                 <img
                   src={getPhotoUrl(userObj.profilePhoto)}
@@ -467,8 +543,13 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
             )}
             <div className="min-w-0">
               <div className="font-semibold text-base md:text-base truncate">{isGroupMode ? (groupObj?.name || 'Select a group') : (userObj ? `${userObj.name || userObj.username}` : 'Select a user')}</div>
-              <div className="flex items-center gap-2 text-[11px] md:text-xs text-gray-500">
+              <div className="flex items-center gap-2 text-[11px] md:text-xs text-gray-500 flex-wrap">
                 <span>{isGroupMode ? 'Share to accepted group members' : 'Share files securely'}</span>
+                {isGroupMode && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                    Admin: {groupObj?.owner?.username || groupObj?.owner?.email || 'Unknown'}
+                  </span>
+                )}
                 {!isGroupMode && userObj && (
                   <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${userObj.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${userObj.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
@@ -481,12 +562,20 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
           <div className="flex items-center gap-2 flex-wrap">
             <div className="text-[11px] md:text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono whitespace-nowrap">v5.0.0 🔐 E2EE</div>
             {isGroupMode && groupObj && isGroupOwner && (
-              <button
-                onClick={() => setShowAddMembers((prev) => !prev)}
-                className="px-3 py-1 text-[11px] md:text-sm bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded font-medium transition-colors"
-              >
-                {showAddMembers ? 'Close Add Users' : 'Add Users'}
-              </button>
+              <>
+                <button
+                  onClick={() => setShowAddMembers((prev) => !prev)}
+                  className="px-3 py-1 text-[11px] md:text-sm bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded font-medium transition-colors"
+                >
+                  {showAddMembers ? 'Close Add Users' : 'Add Users'}
+                </button>
+                <button
+                  onClick={() => setShowEditGroup((prev) => !prev)}
+                  className="px-3 py-1 text-[11px] md:text-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded font-medium transition-colors"
+                >
+                  {showEditGroup ? 'Close Edit Group' : 'Edit Group'}
+                </button>
+              </>
             )}
             {!isGroupMode && userObj && (
               <button
@@ -554,6 +643,88 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {isGroupMode && groupObj && isGroupOwner && showEditGroup && (
+          <div className="mt-3 border rounded-lg p-3 bg-indigo-50 space-y-3">
+            <div className="text-xs md:text-sm font-semibold text-indigo-800">Edit group details</div>
+
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Group name</label>
+              <input
+                value={editingGroupName}
+                onChange={(e) => setEditingGroupName(e.target.value)}
+                className="w-full px-2 py-2 text-sm border rounded"
+                maxLength={80}
+                placeholder="Group name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Group admin</label>
+              <select
+                value={editingAdminId}
+                onChange={(e) => setEditingAdminId(e.target.value)}
+                className="w-full px-2 py-2 text-sm border rounded bg-white"
+              >
+                {acceptedGroupMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}{member.email ? ` (${member.email})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Group photo</label>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setGroupPhotoFile(file)
+                    if (file) setRemoveGroupPhoto(false)
+                  }}
+                  className="text-xs"
+                />
+                <label className="inline-flex items-center gap-1 text-xs text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={removeGroupPhoto}
+                    onChange={(e) => {
+                      setRemoveGroupPhoto(e.target.checked)
+                      if (e.target.checked) setGroupPhotoFile(null)
+                    }}
+                  />
+                  Remove current photo
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleSaveGroup}
+                disabled={isSavingGroup}
+                className="px-3 py-1.5 text-xs md:text-sm bg-indigo-600 text-white rounded disabled:opacity-50"
+              >
+                {isSavingGroup ? 'Saving...' : 'Save Group'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditGroup(false)
+                  setGroupPhotoFile(null)
+                  setRemoveGroupPhoto(false)
+                }}
+                disabled={isSavingGroup}
+                className="px-3 py-1.5 text-xs md:text-sm bg-gray-200 text-gray-700 rounded"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
       </div>

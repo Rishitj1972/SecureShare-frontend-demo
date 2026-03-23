@@ -1,5 +1,21 @@
 import React, { useMemo, useState } from 'react';
 
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const uploadsBase = baseURL.replace(/\/api\/?$/, '')
+
+function getPhotoUrl(photo) {
+  if (!photo) return ''
+  if (photo.startsWith('http')) return photo
+  return `${uploadsBase}${photo}`
+}
+
+function getInitials(name = '') {
+  const parts = name.trim().split(' ').filter(Boolean)
+  const first = parts[0]?.[0] || ''
+  const second = parts[1]?.[0] || ''
+  return (first + second).toUpperCase() || '?'
+}
+
 export default function GroupsList({
   groups,
   pendingInvites,
@@ -114,8 +130,26 @@ export default function GroupsList({
                 selectedGroupId === group._id ? 'bg-blue-100 border-blue-300' : 'hover:bg-gray-50 border-transparent'
               }`}
             >
-              <div className="font-medium truncate">{group.name}</div>
-              <div className="text-[11px] text-gray-500">
+              <div className="flex items-center gap-2">
+                {group.groupPhoto ? (
+                  <img
+                    src={getPhotoUrl(group.groupPhoto)}
+                    alt={group.name}
+                    className="w-8 h-8 rounded-full object-cover border"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[11px] font-semibold text-indigo-700">
+                    {getInitials(group.name)}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{group.name}</div>
+                  <div className="text-[11px] text-gray-500 truncate">
+                    Admin: {group.owner?.username || group.owner?.email || 'Unknown'}
+                  </div>
+                </div>
+              </div>
+              <div className="text-[11px] text-gray-500 mt-1">
                 {group.acceptedCount || 0} accepted • {group.pendingCount || 0} pending
               </div>
             </button>

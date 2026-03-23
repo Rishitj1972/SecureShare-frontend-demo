@@ -75,6 +75,14 @@ export default function Chat(){
   },[user?.id])
 
   useEffect(() => {
+    if (!selectedGroup?._id) return
+    const refreshed = groups.find((group) => group._id === selectedGroup._id)
+    if (refreshed) {
+      setSelectedGroup(refreshed)
+    }
+  }, [groups, selectedGroup?._id])
+
+  useEffect(() => {
     if (!user?.id) return
 
     let cancelled = false
