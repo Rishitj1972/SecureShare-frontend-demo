@@ -28,7 +28,7 @@ function sortConversationFiles(files = []) {
   return [...files].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 }
 
-export default function ConversationPanel({ userId, userObj, groupObj, showNotification }){
+export default function ConversationPanel({ userId, userObj, groupObj, friends = [], onRefreshGroups, showNotification }){
   const [files, setFiles] = useState([])
   const [fileInput, setFileInput] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -44,6 +44,11 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadingFileId, setDownloadingFileId] = useState(null)
   const [isUnfriending, setIsUnfriending] = useState(false)
+  const [showAddMembers, setShowAddMembers] = useState(false)
+  const [groupMembers, setGroupMembers] = useState([])
+  const [loadingGroupMembers, setLoadingGroupMembers] = useState(false)
+  const [selectedNewMemberIds, setSelectedNewMemberIds] = useState([])
+  const [isAddingMembers, setIsAddingMembers] = useState(false)
   const mounted = useRef(true)
   const listRef = useRef(null)
   const { uploadFile, cancelUpload } = useChunkedUpload()
@@ -51,6 +56,21 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
   const { downloadAndDecrypt } = useFileDecryption()
   const { user } = useAuth()
   const isGroupMode = !!groupObj
+  const currentUserId = user?.id || user?._id
+  const ownerId = groupObj?.owner?._id || groupObj?.owner
+  const isGroupOwner = isGroupMode && !!ownerId && String(ownerId) === String(currentUserId)
+
+  const memberStatusByUserId = groupMembers.reduce((acc, member) => {
+    const memberUserId = member?.user?._id || member?.user
+    if (!memberUserId) return acc
+    acc[String(memberUserId)] = member.status
+    return acc
+  }, {})
+
+  const inviteCandidates = (Array.isArray(friends) ? friends : []).filter((friend) => {
+    const status = memberStatusByUserId[String(friend._id)]
+    return status !== 'accepted' && status !== 'pending'
+  })
 
   useEffect(()=>{
     mounted.current = true
@@ -87,6 +107,62 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
     if (!listRef.current) return
     listRef.current.scrollTop = listRef.current.scrollHeight
   }, [files.length, userId])
+
+  useEffect(() => {
+    setShowAddMembers(false)
+    setSelectedNewMemberIds([])
+
+    if (!isGroupMode || !groupObj?._id) {
+      setGroupMembers([])
+      return
+    }
+
+    const loadGroupMembers = async () => {
+      setLoadingGroupMembers(true)
+      try {
+        const membersRes = await api.get(`/groups/${groupObj._id}/members`)
+        setGroupMembers(Array.isArray(membersRes?.data?.members) ? membersRes.data.members : [])
+      } catch (_) {
+        setGroupMembers([])
+      } finally {
+        setLoadingGroupMembers(false)
+      }
+    }
+
+    loadGroupMembers()
+  }, [isGroupMode, groupObj?._id])
+
+  const toggleNewMember = (friendId) => {
+    setSelectedNewMemberIds((prev) =>
+      prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]
+    )
+  }
+
+  const handleAddMembersToGroup = async () => {
+    if (!groupObj?._id || selectedNewMemberIds.length === 0) return
+
+    setIsAddingMembers(true)
+    try {
+      const res = await api.post(`/groups/${groupObj._id}/invite`, { memberIds: selectedNewMemberIds })
+      const invitedCount = res?.data?.invitedCount ?? selectedNewMemberIds.length
+
+      if (invitedCount > 0) {
+        showNotification && showNotification(`Added ${invitedCount} member${invitedCount > 1 ? 's' : ''} to group`, 'success')
+      } else {
+        showNotification && showNotification('No new members were added', 'error')
+      }
+
+      const membersRes = await api.get(`/groups/${groupObj._id}/members`)
+      setGroupMembers(Array.isArray(membersRes?.data?.members) ? membersRes.data.members : [])
+      await onRefreshGroups?.()
+      setSelectedNewMemberIds([])
+      setShowAddMembers(false)
+    } catch (err) {
+      showNotification && showNotification(err?.response?.data?.message || 'Failed to add members', 'error')
+    } finally {
+      setIsAddingMembers(false)
+    }
+  }
 
   const submit = async (e) => {
     e && e.preventDefault && e.preventDefault()
@@ -404,6 +480,14 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="text-[11px] md:text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono whitespace-nowrap">v5.0.0 🔐 E2EE</div>
+            {isGroupMode && groupObj && isGroupOwner && (
+              <button
+                onClick={() => setShowAddMembers((prev) => !prev)}
+                className="px-3 py-1 text-[11px] md:text-sm bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded font-medium transition-colors"
+              >
+                {showAddMembers ? 'Close Add Users' : 'Add Users'}
+              </button>
+            )}
             {!isGroupMode && userObj && (
               <button
                 onClick={handleUnfriend}
@@ -415,6 +499,63 @@ export default function ConversationPanel({ userId, userObj, groupObj, showNotif
             )}
           </div>
         </div>
+
+        {isGroupMode && groupObj && isGroupOwner && showAddMembers && (
+          <div className="mt-3 border rounded-lg p-3 bg-emerald-50">
+            <div className="text-xs md:text-sm font-semibold text-emerald-800 mb-2">Add users to this group</div>
+            {loadingGroupMembers ? (
+              <div className="text-xs text-gray-500">Loading current members...</div>
+            ) : (
+              <>
+                <div className="max-h-36 overflow-auto border rounded p-2 bg-white">
+                  {inviteCandidates.length === 0 && (
+                    <div className="text-xs text-gray-500">No eligible friends to add right now.</div>
+                  )}
+                  {inviteCandidates.map((friend) => {
+                    const status = memberStatusByUserId[String(friend._id)]
+                    const isReinvite = status === 'rejected'
+
+                    return (
+                      <label key={friend._id} className="flex items-center justify-between gap-2 text-xs py-1 cursor-pointer">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedNewMemberIds.includes(friend._id)}
+                            onChange={() => toggleNewMember(friend._id)}
+                            disabled={isAddingMembers}
+                          />
+                          <span className="truncate">{friend.username || friend.name}</span>
+                        </div>
+                        {isReinvite && <span className="text-[10px] text-orange-600">Re-invite</span>}
+                      </label>
+                    )
+                  })}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddMembersToGroup}
+                    disabled={isAddingMembers || selectedNewMemberIds.length === 0}
+                    className="px-3 py-1.5 text-xs md:text-sm bg-emerald-600 text-white rounded disabled:opacity-50"
+                  >
+                    {isAddingMembers ? 'Adding...' : 'Add Selected Users'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedNewMemberIds([])
+                      setShowAddMembers(false)
+                    }}
+                    disabled={isAddingMembers}
+                    className="px-3 py-1.5 text-xs md:text-sm bg-gray-200 text-gray-700 rounded"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div ref={listRef} className="flex-1 overflow-auto space-y-2 md:space-y-4 mb-3 px-1 md:px-2">
