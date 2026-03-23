@@ -70,6 +70,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const currentUserId = user?.id || user?._id
   const ownerId = groupObj?.owner?._id || groupObj?.owner
   const isGroupOwner = isGroupMode && !!ownerId && String(ownerId) === String(currentUserId)
+  const isEditingGroupSettings = isGroupMode && !!groupObj && isGroupOwner && showEditGroup
   const currentGroupPhotoUrl = groupObj?.groupPhoto ? getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt) : ''
   const visibleGroupPhotoPreview = groupPhotoPreview || currentGroupPhotoUrl
 
@@ -687,7 +688,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
         )}
 
         {isGroupMode && groupObj && isGroupOwner && showEditGroup && (
-          <div className="mt-3 mb-12 border rounded-lg p-3 bg-indigo-50 space-y-3">
+          <div className="mt-3 mb-8 border rounded-lg p-3 bg-indigo-50 space-y-3">
             <div className="text-xs md:text-sm font-semibold text-indigo-800">Edit group details</div>
 
             <div>
@@ -773,7 +774,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
         )}
       </div>
 
-      <div ref={listRef} className="flex-1 overflow-auto space-y-2 md:space-y-4 mb-3 px-1 md:px-2">
+      <div ref={listRef} className={`flex-1 overflow-auto space-y-2 md:space-y-4 px-1 md:px-2 ${isEditingGroupSettings ? 'mb-0' : 'mb-3'}`}>
         {loading && <div className="text-sm text-gray-500">Loading files...</div>}
         
         {!loading && files.length > 0 && (
@@ -807,6 +808,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
         {files.length === 0 && !loading && <div className="text-sm text-gray-500">No files shared yet.</div>}
       </div>
 
+      {!isEditingGroupSettings && (
       <div className="mt-2 border-t pt-2 sticky bottom-0 bg-white z-10 shadow-md">
         <form className="flex flex-col md:flex-row md:items-center gap-2 py-2" onSubmit={submit}>
           <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded cursor-pointer hover:bg-gray-50 md:flex-shrink-0 text-sm md:text-base">
@@ -871,6 +873,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }  
