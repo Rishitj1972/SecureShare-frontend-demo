@@ -40,6 +40,10 @@ export default function GroupsList({
     [groups]
   );
 
+  const selectedCount = selectedFriendIds.length;
+  const canCreate = !!name.trim();
+  const shouldScrollGroups = sortedGroups.length > 2;
+
   const toggleFriend = (friendId) => {
     setSelectedFriendIds((prev) =>
       prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]
@@ -67,34 +71,43 @@ export default function GroupsList({
     <div className="h-full flex flex-col bg-white min-h-0 border-r">
       <div className="font-semibold px-3 pt-3 pb-2 text-gray-800 border-b text-sm md:text-base">Groups</div>
 
-      <form onSubmit={submitCreate} className="p-3 border-b space-y-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="New group name"
-          className="w-full px-2 py-2 text-sm border rounded"
-          maxLength={80}
-        />
-        <div className="max-h-24 overflow-auto border rounded p-2">
-          {(friends || []).length === 0 && <div className="text-xs text-gray-500">No friends to invite yet</div>}
-          {(friends || []).map((friend) => (
-            <label key={friend._id} className="flex items-center gap-2 text-xs py-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedFriendIds.includes(friend._id)}
-                onChange={() => toggleFriend(friend._id)}
-              />
-              <span className="truncate">{friend.username || friend.name}</span>
-            </label>
-          ))}
+      <form onSubmit={submitCreate} className="p-3 border-b bg-gradient-to-b from-slate-50 to-white">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold text-slate-700">Create New Group</div>
+            <div className="text-[11px] text-slate-500">{selectedCount} selected</div>
+          </div>
+
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter group name"
+            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            maxLength={80}
+          />
+
+          <div className="border border-slate-200 rounded-lg p-2 bg-slate-50 max-h-28 overflow-y-auto">
+            {(friends || []).length === 0 && <div className="text-xs text-slate-500">No friends to invite yet</div>}
+            {(friends || []).map((friend) => (
+              <label key={friend._id} className="flex items-center gap-2 text-xs py-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedFriendIds.includes(friend._id)}
+                  onChange={() => toggleFriend(friend._id)}
+                />
+                <span className="truncate text-slate-700">{friend.username || friend.name}</span>
+              </label>
+            ))}
+          </div>
+
+          <button
+            type="submit"
+            disabled={isCreating || !canCreate}
+            className="w-full px-3 py-2.5 text-sm bg-blue-600 text-white rounded-lg disabled:opacity-50 hover:bg-blue-700 font-medium"
+          >
+            {isCreating ? 'Creating...' : 'Create Group'}
+          </button>
         </div>
-        <button
-          type="submit"
-          disabled={isCreating || !name.trim()}
-          className="w-full px-2 py-2 text-sm bg-blue-600 text-white rounded disabled:opacity-50"
-        >
-          {isCreating ? 'Creating...' : 'Create Group'}
-        </button>
       </form>
 
       <div className="px-3 py-2 border-b">
@@ -126,40 +139,43 @@ export default function GroupsList({
 
       {loading && <div className="text-xs text-gray-500 px-3 py-3">Loading groups...</div>}
       {!loading && (
-        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
-          {sortedGroups.map((group) => (
-            <button
-              key={group._id}
-              onClick={() => onSelectGroup?.(group)}
-              className={`w-full text-left p-2 rounded text-sm border ${
-                selectedGroupId === group._id ? 'bg-blue-100 border-blue-300' : 'hover:bg-gray-50 border-transparent'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {group.groupPhoto ? (
-                  <img
-                    src={getPhotoUrl(group.groupPhoto, group.updatedAt)}
-                    alt={group.name}
-                    className="w-8 h-8 rounded-full object-cover border"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[11px] font-semibold text-indigo-700">
-                    {getInitials(group.name)}
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium truncate">{group.name}</div>
-                  <div className="text-[11px] text-gray-500 truncate">
-                    Admin: {group.owner?.username || group.owner?.email || 'Unknown'}
+        <div className="flex-1 min-h-0 px-2 py-2">
+          <div className="text-[11px] font-semibold text-slate-500 px-1 pb-2">Your Groups</div>
+          <div className={`${shouldScrollGroups ? 'max-h-[205px] overflow-y-auto pr-1' : ''} space-y-1`}>
+            {sortedGroups.map((group) => (
+              <button
+                key={group._id}
+                onClick={() => onSelectGroup?.(group)}
+                className={`w-full text-left p-2 rounded text-sm border ${
+                  selectedGroupId === group._id ? 'bg-blue-100 border-blue-300' : 'hover:bg-gray-50 border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {group.groupPhoto ? (
+                    <img
+                      src={getPhotoUrl(group.groupPhoto, group.updatedAt)}
+                      alt={group.name}
+                      className="w-8 h-8 rounded-full object-cover border"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[11px] font-semibold text-indigo-700">
+                      {getInitials(group.name)}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium truncate">{group.name}</div>
+                    <div className="text-[11px] text-gray-500 truncate">
+                      Admin: {group.owner?.username || group.owner?.email || 'Unknown'}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="text-[11px] text-gray-500 mt-1">
-                {group.acceptedCount || 0} accepted • {group.pendingCount || 0} pending
-              </div>
-            </button>
-          ))}
-          {sortedGroups.length === 0 && <div className="text-xs text-gray-500 px-2">No groups yet</div>}
+                <div className="text-[11px] text-gray-500 mt-1">
+                  {group.acceptedCount || 0} accepted • {group.pendingCount || 0} pending
+                </div>
+              </button>
+            ))}
+            {sortedGroups.length === 0 && <div className="text-xs text-gray-500 px-2">No groups yet</div>}
+          </div>
         </div>
       )}
     </div>
