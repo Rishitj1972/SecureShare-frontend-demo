@@ -3,10 +3,15 @@ import React, { useMemo, useState } from 'react';
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const uploadsBase = baseURL.replace(/\/api\/?$/, '')
 
-function getPhotoUrl(photo) {
+function getPhotoUrl(photo, timestamp) {
   if (!photo) return ''
   if (photo.startsWith('http')) return photo
-  return `${uploadsBase}${photo}`
+  const url = `${uploadsBase}${photo}`
+  // Add cache buster using timestamp if provided
+  if (timestamp) {
+    return `${url}?t=${timestamp}`
+  }
+  return url
 }
 
 function getInitials(name = '') {
@@ -133,7 +138,7 @@ export default function GroupsList({
               <div className="flex items-center gap-2">
                 {group.groupPhoto ? (
                   <img
-                    src={getPhotoUrl(group.groupPhoto)}
+                    src={getPhotoUrl(group.groupPhoto, group.updatedAt)}
                     alt={group.name}
                     className="w-8 h-8 rounded-full object-cover border"
                   />

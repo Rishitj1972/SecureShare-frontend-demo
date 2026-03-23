@@ -11,10 +11,15 @@ import { useAuth } from '../context/AuthContext'
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 const uploadsBase = baseURL.replace(/\/api\/?$/, '')
 
-function getPhotoUrl(photo) {
+function getPhotoUrl(photo, timestamp) {
   if (!photo) return ''
   if (photo.startsWith('http')) return photo
-  return `${uploadsBase}${photo}`
+  const url = `${uploadsBase}${photo}`
+  // Add cache buster using timestamp if provided
+  if (timestamp) {
+    return `${url}?t=${timestamp}`
+  }
+  return url
 }
 
 function getInitials(name = '') {
@@ -519,7 +524,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
             {isGroupMode ? (
               groupObj?.groupPhoto ? (
                 <img
-                  src={getPhotoUrl(groupObj.groupPhoto)}
+                  src={getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt)}
                   alt={groupObj?.name || 'Group'}
                   className="w-10 h-10 rounded-full object-cover border"
                 />
