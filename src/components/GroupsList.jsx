@@ -42,7 +42,6 @@ export default function GroupsList({
 
   const selectedCount = selectedFriendIds.length;
   const canCreate = !!name.trim();
-  const shouldScrollGroups = sortedGroups.length > 2;
 
   const toggleFriend = (friendId) => {
     setSelectedFriendIds((prev) =>
@@ -139,9 +138,9 @@ export default function GroupsList({
 
       {loading && <div className="text-xs text-gray-500 px-3 py-3">Loading groups...</div>}
       {!loading && (
-        <div className="flex-1 min-h-0 px-2 py-2">
-          <div className="text-[11px] font-semibold text-slate-500 px-1 pb-2">Your Groups</div>
-          <div className={`${shouldScrollGroups ? 'max-h-[205px] overflow-y-auto pr-1' : ''} space-y-1`}>
+        <div className="flex-1 min-h-0 px-2 py-2 pr-1 overflow-y-scroll">
+          <div className="text-[11px] font-semibold text-slate-500 px-1 pb-2 sticky top-0 bg-white z-10">Your Groups</div>
+          <div className="space-y-1">
             {sortedGroups.map((group) => (
               <button
                 key={group._id}
