@@ -29,6 +29,8 @@ export default function Chat(){
   const [mode, setMode] = useState('friends')
   const [note, setNote] = useState(null)
 
+  const hasActiveConversation = mode === 'groups' ? !!selectedGroup : !!selectedFriend
+
   const loadFriends = async () => {
     const res = await api.get('/friends')
 
@@ -167,7 +169,7 @@ export default function Chat(){
   return (
     <div className="h-full flex flex-col md:flex-row section-card overflow-hidden">
       {/* Sidebar */}
-      <div className="w-full md:w-80 lg:w-96 md:border-r border-[#d6e7e0] bg-[#fcfffd] flex flex-col min-h-0 shadow-sm h-[52%] md:h-auto">
+      <div className={`${hasActiveConversation ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 md:border-r border-[#d6e7e0] bg-[#fcfffd] flex-col min-h-0 shadow-sm h-full md:h-auto`}>
         {/* Header */}
         <div className="px-4 py-4 border-b border-[#d6e7e0] bg-gradient-to-r from-[#0e9f8b] to-[#0a7e6e] sticky top-0 z-20">
           <h1 className="font-bold text-lg text-white mb-3 flex items-center gap-2">
@@ -242,7 +244,22 @@ export default function Chat(){
       </div>
 
       {/* Main Conversation Area */}
-      <div className="flex flex-1 flex-col min-h-0 bg-[#fafffd] overflow-hidden h-[48%] md:h-auto">
+      <div className={`${hasActiveConversation ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-h-0 bg-[#fafffd] overflow-hidden h-full md:h-auto`}>
+        <div className="md:hidden border-b border-[#d8e7e1] px-3 py-2.5 bg-white flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedFriend(null)
+              setSelectedGroup(null)
+            }}
+            className="px-2.5 py-1.5 rounded-lg border border-[#cde0d7] text-[#315e56] bg-[#f6fcf9]"
+          >
+            Back
+          </button>
+          <div className="text-sm font-semibold text-[#123a33] truncate">
+            {selectedGroup?.name || selectedFriend?.name || selectedFriend?.username || 'Conversation'}
+          </div>
+        </div>
         <ConversationPanel
           userId={selectedFriend?._id}
           userObj={selectedWithPresence}

@@ -183,6 +183,19 @@ h6 {
   }
 }
 
+@media (max-width: 767px) {
+  .app-shell {
+    padding: 0;
+  }
+
+  .glass-panel {
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    box-shadow: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

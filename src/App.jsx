@@ -77,7 +77,7 @@ export default function App(){
         </div>
       )}
 
-      <div className="flex-1 min-h-0 p-2 md:p-4 overflow-hidden">
+      <div className="flex-1 min-h-0 p-1 md:p-4 overflow-hidden">
         <Routes>
           <Route path="/" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/users/:id" element={<PrivateRoute><UserFiles /></PrivateRoute>} />
