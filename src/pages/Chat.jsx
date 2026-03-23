@@ -25,6 +25,7 @@ export default function Chat(){
   const [loading, setLoading] = useState(false)
   const [selectedFriend, setSelectedFriend] = useState(null)
   const [selectedGroup, setSelectedGroup] = useState(null)
+  const [latestCreatedGroupId, setLatestCreatedGroupId] = useState(null)
   const [mode, setMode] = useState('friends')
   const [note, setNote] = useState(null)
 
@@ -131,7 +132,9 @@ export default function Chat(){
 
   const createGroup = async ({ name, memberIds }) => {
     try {
-      await api.post('/groups', { name, memberIds })
+      const res = await api.post('/groups', { name, memberIds })
+      const createdGroupId = res?.data?.groupId || null
+      setLatestCreatedGroupId(createdGroupId)
       await loadGroups()
       showNotification('Group created successfully', 'success')
       setMode('groups')
@@ -193,6 +196,7 @@ export default function Chat(){
             groups={groups}
             pendingInvites={pendingInvites}
             friends={users}
+            latestCreatedGroupId={latestCreatedGroupId}
             selectedGroupId={selectedGroup?._id}
             loading={loading}
             onCreateGroup={createGroup}
