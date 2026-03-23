@@ -784,6 +784,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                 key={f._id} 
                 file={f} 
                 isSent={f.sender?._id === user?.id}
+                isGroupMode={isGroupMode}
                 currentUserId={user?.id}
                 isDownloading={isDownloading}
                 downloadingFileId={downloadingFileId}

@@ -2,6 +2,22 @@ import React from 'react'
 import { Menu } from '@headlessui/react'
 import { EllipsisVerticalIcon, ArrowDownTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const uploadsBase = baseURL.replace(/\/api\/?$/, '')
+
+function getPhotoUrl(photo) {
+  if (!photo) return ''
+  if (photo.startsWith('http')) return photo
+  return `${uploadsBase}${photo}`
+}
+
+function getInitials(name = '') {
+  const parts = name.trim().split(' ').filter(Boolean)
+  const first = parts[0]?.[0] || ''
+  const second = parts[1]?.[0] || ''
+  return (first + second).toUpperCase() || '?'
+}
+
 function FileIcon({ mime }){
   // very simple mapping, extend as needed
   if(!mime) return <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-xl">?</div>
@@ -60,25 +76,47 @@ function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
-export default function FileCard({ file, onDownload, onDelete, isSent, currentUserId, isDownloading, downloadingFileId, downloadProgress, downloadStage }){
+export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMode = false, currentUserId, isDownloading, downloadingFileId, downloadProgress, downloadStage }){
   const name = file.originalFileName || file.originalName || 'file'
   const sizeFormatted = formatFileSize(file.fileSize)
   const time = file.createdAt ? new Date(file.createdAt).toLocaleString() : ''
+  const sharedBy = file?.sender?.username || file?.sender?.email || 'Unknown'
+  const sharedByIsMe = String(file?.sender?._id || '') === String(currentUserId || '')
+  const sharedByLabel = sharedByIsMe ? 'You' : sharedBy
   
   // Check if this specific file is being downloaded
   const isThisFileDownloading = isDownloading && !isSent && downloadingFileId === file._id
   
   return (
-    <div className={`flex flex-col md:flex-row items-start gap-3 p-3 md:p-4 rounded-xl shadow-sm border transition-all hover:shadow-md ${
+    <div className={`flex flex-col md:flex-row items-start ${isGroupMode ? 'gap-2 p-2.5 md:p-3 rounded-lg' : 'gap-3 p-3 md:p-4 rounded-xl'} shadow-sm border transition-all hover:shadow-md ${
       isSent 
         ? 'bg-green-50 border-green-200 md:ml-8' 
         : 'bg-blue-50 border-blue-200 md:mr-8'
     }`}>
+      {isGroupMode && (
+        <div className="w-full flex items-center gap-2 pb-1 border-b border-blue-100">
+          {file?.sender?.profilePhoto ? (
+            <img
+              src={getPhotoUrl(file.sender.profilePhoto)}
+              alt={sharedBy}
+              className="w-6 h-6 rounded-full object-cover border"
+            />
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-semibold text-gray-600">
+              {getInitials(sharedBy)}
+            </div>
+          )}
+          <div className="text-xs text-gray-700 truncate">
+            Shared by <span className="font-semibold">{sharedByLabel}</span>
+          </div>
+        </div>
+      )}
+
       {/* File Icon or Download Progress */}
-      <div className="relative flex-shrink-0 scale-90 md:scale-100 origin-top">
+      <div className={`relative flex-shrink-0 ${isGroupMode ? 'scale-75 md:scale-90' : 'scale-90 md:scale-100'} origin-top`}>
         {isThisFileDownloading ? (
           <div className="flex flex-col items-center gap-1">
-            <CircularProgress progress={downloadProgress} size={56} strokeWidth={4} />
+            <CircularProgress progress={downloadProgress} size={isGroupMode ? 48 : 56} strokeWidth={4} />
             <div className="text-[10px] text-blue-600 font-medium mt-1">
               {downloadStage === 'downloading' && '📥'}
               {downloadStage === 'decrypting' && '🔓'}
@@ -94,9 +132,9 @@ export default function FileCard({ file, onDownload, onDelete, isSent, currentUs
       <div className="flex-1 min-w-0 w-full">
         <div className="flex flex-col md:flex-row items-start justify-between gap-3 md:gap-2">
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-gray-900 truncate">{name}</div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-gray-600">{sizeFormatted}</span>
+            <div className={`font-semibold text-gray-900 truncate ${isGroupMode ? 'text-sm' : ''}`}>{name}</div>
+            <div className={`flex items-center gap-2 mt-1 ${isGroupMode ? 'flex-wrap' : ''}`}>
+              <span className={`${isGroupMode ? 'text-xs' : 'text-sm'} text-gray-600`}>{sizeFormatted}</span>
               {time && <span className="text-xs text-gray-400">• {new Date(file.createdAt).toLocaleDateString()}</span>}
               {file.isEncrypted && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">🔒 E2EE</span>}
             </div>
@@ -124,7 +162,7 @@ export default function FileCard({ file, onDownload, onDelete, isSent, currentUs
               !isThisFileDownloading && (
                 <button 
                   onClick={onDownload} 
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-blue-300 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors w-full md:w-auto justify-center"
+                  className={`inline-flex items-center gap-2 ${isGroupMode ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-sm'} bg-white border border-blue-300 rounded-lg font-medium text-blue-700 hover:bg-blue-100 transition-colors w-full md:w-auto justify-center`}
                 >
                   <ArrowDownTrayIcon className="w-4 h-4" />
                   <span>Download</span>
