@@ -137,14 +137,8 @@ export default function Chat(){
       const res = await api.post('/groups', { name, memberIds })
       const createdGroupId = res?.data?.groupId || null
       setLatestCreatedGroupId(createdGroupId)
-      const latestGroups = await loadGroups()
-      const createdGroup = latestGroups.find((group) => group._id === createdGroupId)
-      if (createdGroup) {
-        setSelectedGroup(createdGroup)
-        setSelectedFriend(null)
-      }
+      await loadGroups()
       showNotification('Group created successfully', 'success')
-      setMode('groups')
     } catch (err) {
       showNotification(err?.response?.data?.message || 'Failed to create group', 'error')
       throw err

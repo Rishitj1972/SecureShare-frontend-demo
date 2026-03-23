@@ -143,12 +143,14 @@ export default function GroupsList({
         </div>
       )}
 
-      <div className="p-2 bg-white/80">
-        <details className="rounded-xl border border-slate-200 bg-white shadow-sm" open>
-          <summary className="px-3 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
-            Group Creation
+      <div className="p-2 bg-white/80 space-y-2">
+        <details className="rounded-xl border border-slate-200 bg-white shadow-sm group">
+          <summary className="px-3 py-2.5 text-xs font-semibold text-slate-700 cursor-pointer select-none flex items-center justify-between">
+            <span>Create New Group</span>
+            <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
+            <span className="text-[10px] text-slate-500 hidden group-open:inline">Collapse</span>
           </summary>
-          <form onSubmit={submitCreate} className="px-3 pb-3 space-y-3">
+          <form onSubmit={submitCreate} className="px-3 pb-3 space-y-3 border-t border-slate-100">
             <div className="text-[11px] text-slate-500">Pick a name and invite teammates</div>
 
             <input
@@ -192,11 +194,13 @@ export default function GroupsList({
           </form>
         </details>
 
-        <details className="mt-2 rounded-xl border border-slate-200 bg-white shadow-sm" open>
-          <summary className="px-3 py-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
-            Pending Invites ({pendingInvites?.length || 0})
+        <details className="rounded-xl border border-slate-200 bg-white shadow-sm group">
+          <summary className="px-3 py-2.5 text-xs font-semibold text-slate-700 cursor-pointer select-none flex items-center justify-between">
+            <span>Pending Invites ({pendingInvites?.length || 0})</span>
+            <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
+            <span className="text-[10px] text-slate-500 hidden group-open:inline">Collapse</span>
           </summary>
-          <div className="px-3 pb-3 max-h-32 overflow-y-auto">
+          <div className="px-3 pb-3 pt-1 max-h-32 overflow-y-auto border-t border-slate-100">
             {(pendingInvites || []).length === 0 && <div className="text-xs text-slate-500">No pending invites</div>}
             {(pendingInvites || []).map((invite) => (
               <div key={invite.groupId} className="bg-amber-50 border border-amber-100 rounded-xl p-2.5 mb-2">
