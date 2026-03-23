@@ -974,8 +974,8 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       </div>
 
       {!isEditingGroupSettings && (
-      <div className="mt-2 border-t pt-2 sticky bottom-0 bg-white z-10 shadow-md">
-        <form className="flex flex-col md:flex-row md:items-center gap-2 py-2" onSubmit={submit}>
+      <div className="mt-8 border-t pt-4 sticky bottom-0 bg-white z-10 shadow-md">
+        <form className="flex flex-col md:flex-row md:items-center gap-2 py-3" onSubmit={submit}>
           <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded cursor-pointer hover:bg-gray-50 md:flex-shrink-0 text-sm md:text-base">
             <input type="file" className="hidden" onChange={e=>setFileInput(e.target.files[0])} disabled={isUploading || isEncrypting} />
             <span className="text-sm md:text-base">📎 Attach</span>
