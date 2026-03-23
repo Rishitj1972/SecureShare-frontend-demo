@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 export default function GroupsList({
   groups,
@@ -8,11 +8,14 @@ export default function GroupsList({
   loading,
   onSelectGroup,
   onCreateGroup,
-  onRespondToInvite
+  onRespondToInvite,
+  onInviteMembers
 }) {
   const [name, setName] = useState('');
   const [selectedFriendIds, setSelectedFriendIds] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedInviteFriendIds, setSelectedInviteFriendIds] = useState([]);
+  const [isInviting, setIsInviting] = useState(false);
 
   const sortedGroups = useMemo(
     () => [...(groups || [])].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)),
@@ -24,6 +27,16 @@ export default function GroupsList({
       prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]
     );
   };
+
+  const toggleInviteFriend = (friendId) => {
+    setSelectedInviteFriendIds((prev) =>
+      prev.includes(friendId) ? prev.filter((id) => id !== friendId) : [...prev, friendId]
+    );
+  };
+
+  useEffect(() => {
+    setSelectedInviteFriendIds([]);
+  }, [selectedGroupId]);
 
   const submitCreate = async (e) => {
     e.preventDefault();
@@ -39,6 +52,22 @@ export default function GroupsList({
       setSelectedFriendIds([]);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const submitInvite = async (e) => {
+    e.preventDefault();
+    if (!selectedGroupId || selectedInviteFriendIds.length === 0) return;
+
+    setIsInviting(true);
+    try {
+      await onInviteMembers?.({
+        groupId: selectedGroupId,
+        memberIds: selectedInviteFriendIds
+      });
+      setSelectedInviteFriendIds([]);
+    } finally {
+      setIsInviting(false);
     }
   };
 
@@ -73,6 +102,33 @@ export default function GroupsList({
           className="w-full px-2 py-2 text-sm bg-blue-600 text-white rounded disabled:opacity-50"
         >
           {isCreating ? 'Creating...' : 'Create Group'}
+        </button>
+      </form>
+
+      <form onSubmit={submitInvite} className="p-3 border-b space-y-2">
+        <div className="text-xs font-semibold text-gray-600">
+          {selectedGroupId ? 'Add Members To Selected Group' : 'Select a group to add members'}
+        </div>
+        <div className="max-h-24 overflow-auto border rounded p-2">
+          {(friends || []).length === 0 && <div className="text-xs text-gray-500">No friends available</div>}
+          {(friends || []).map((friend) => (
+            <label key={friend._id} className="flex items-center gap-2 text-xs py-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedInviteFriendIds.includes(friend._id)}
+                onChange={() => toggleInviteFriend(friend._id)}
+                disabled={!selectedGroupId}
+              />
+              <span className="truncate">{friend.username || friend.name}</span>
+            </label>
+          ))}
+        </div>
+        <button
+          type="submit"
+          disabled={isInviting || !selectedGroupId || selectedInviteFriendIds.length === 0}
+          className="w-full px-2 py-2 text-sm bg-emerald-600 text-white rounded disabled:opacity-50"
+        >
+          {isInviting ? 'Adding...' : 'Add Selected To Group'}
         </button>
       </form>
 

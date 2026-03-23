@@ -133,6 +133,22 @@ export default function Chat(){
     }
   }
 
+  const inviteMembersToGroup = async ({ groupId, memberIds }) => {
+    try {
+      const res = await api.post(`/groups/${groupId}/invite`, { memberIds })
+      await loadGroups()
+      const invitedCount = res?.data?.invitedCount ?? memberIds.length
+      if (invitedCount > 0) {
+        showNotification(`Added ${invitedCount} member${invitedCount > 1 ? 's' : ''} to group`, 'success')
+      } else {
+        showNotification('No new members were added (they may already be in this group)', 'error')
+      }
+    } catch (err) {
+      showNotification(err?.response?.data?.message || 'Failed to add members to group', 'error')
+      throw err
+    }
+  }
+
   const respondToInvite = async (groupId, action) => {
     try {
       await api.put(`/groups/${groupId}/invitations/respond`, { action })
@@ -188,6 +204,7 @@ export default function Chat(){
             selectedGroupId={selectedGroup?._id}
             loading={loading}
             onCreateGroup={createGroup}
+            onInviteMembers={inviteMembersToGroup}
             onRespondToInvite={respondToInvite}
             onSelectGroup={(group) => {
               setSelectedGroup(group)
