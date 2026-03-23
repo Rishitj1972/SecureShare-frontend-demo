@@ -62,6 +62,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const [groupPhotoPreview, setGroupPhotoPreview] = useState('')
   const [isSavingGroup, setIsSavingGroup] = useState(false)
   const [isDeletingGroup, setIsDeletingGroup] = useState(false)
+  const [isLeavingGroup, setIsLeavingGroup] = useState(false)
   const mounted = useRef(true)
   const listRef = useRef(null)
   const { uploadFile, cancelUpload } = useChunkedUpload()
@@ -318,6 +319,22 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       showNotification && showNotification(err?.response?.data?.message || 'Failed to delete group', 'error')
     } finally {
       setIsDeletingGroup(false)
+    }
+  }
+
+  const handleLeaveGroup = async () => {
+    if (!groupObj?._id || isGroupOwner) return
+    const groupName = groupObj?.name || 'this group'
+    if (!window.confirm(`Leave ${groupName}? You will be removed from this group.`)) return
+
+    setIsLeavingGroup(true)
+    try {
+      await api.put(`/groups/${groupObj._id}/leave`)
+      await onGroupDeleted?.()
+    } catch (err) {
+      showNotification && showNotification(err?.response?.data?.message || 'Failed to leave group', 'error')
+    } finally {
+      setIsLeavingGroup(false)
     }
   }
 
@@ -704,6 +721,29 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                   )}
                 </button>
               </>
+            )}
+            {isGroupMode && groupObj && !isGroupOwner && (
+              <button
+                onClick={handleLeaveGroup}
+                disabled={isLeavingGroup}
+                title={isLeavingGroup ? 'Leaving Group' : 'Leave Group'}
+                aria-label={isLeavingGroup ? 'Leaving Group' : 'Leave Group'}
+                className="w-9 h-9 inline-flex items-center justify-center bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-md font-medium transition-colors disabled:opacity-50"
+              >
+                {isLeavingGroup ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 animate-pulse">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                )}
+              </button>
             )}
             {!isGroupMode && userObj && (
               <button
