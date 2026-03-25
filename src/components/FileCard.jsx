@@ -108,9 +108,9 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
         title="Cancel download"
         aria-label="Cancel download"
         className="absolute inset-0 m-auto inline-flex items-center justify-center rounded-full bg-white/90 text-red-600 border border-red-200 shadow-sm hover:bg-white"
-        style={{ width: Math.round(size * 0.42), height: Math.round(size * 0.42) }}
+        style={{ width: Math.round(size * 0.5), height: Math.round(size * 0.5) }}
       >
-        <span className="text-base leading-none font-bold">×</span>
+        <span className="text-lg leading-none font-bold">×</span>
       </button>
     )
   }
@@ -142,8 +142,8 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
           <div className="relative flex-shrink-0 scale-75 origin-top-left">
             {isThisFileDownloading ? (
               <div className="relative inline-flex items-center justify-center">
-                <CircularProgress progress={downloadProgress} size={40} strokeWidth={3} />
-                {renderCancelInProgress(40)}
+                <CircularProgress progress={downloadProgress} size={46} strokeWidth={3.5} />
+                {renderCancelInProgress(46)}
               </div>
             ) : (
               <FileIcon mime={file.mimeType} />
@@ -212,8 +212,8 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
         {isThisFileDownloading ? (
           <div className="flex flex-col items-center gap-1">
             <div className="relative inline-flex items-center justify-center">
-              <CircularProgress progress={downloadProgress} size={48} strokeWidth={4} />
-              {renderCancelInProgress(48)}
+              <CircularProgress progress={downloadProgress} size={54} strokeWidth={4.5} />
+              {renderCancelInProgress(54)}
             </div>
             <div className="text-[10px] text-blue-600 font-medium mt-1">
               {downloadStage === 'downloading' && '📥'}
