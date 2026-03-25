@@ -117,7 +117,7 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
 
   if (isGroupMode) {
     return (
-      <div className="rounded-xl border border-[#d8e7e1] bg-white p-2.5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="rounded-xl border border-[#d8e7e1] bg-white p-2 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="min-w-0 flex items-center gap-2">
             {file?.sender?.profilePhoto ? (
@@ -142,8 +142,8 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
           <div className="relative flex-shrink-0 scale-75 origin-top-left">
             {isThisFileDownloading ? (
               <div className="relative inline-flex items-center justify-center">
-                <CircularProgress progress={downloadProgress} size={44} strokeWidth={3} />
-                {renderCancelInProgress(44)}
+                <CircularProgress progress={downloadProgress} size={40} strokeWidth={3} />
+                {renderCancelInProgress(40)}
               </div>
             ) : (
               <FileIcon mime={file.mimeType} />
@@ -202,18 +202,18 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
   }
   
   return (
-    <div className={`flex flex-col md:flex-row items-start gap-3 p-3 md:p-4 rounded-xl shadow-sm border transition-all hover:shadow-md ${
+    <div className={`flex flex-col md:flex-row items-start gap-2.5 p-2.5 md:p-3 rounded-xl shadow-sm border transition-all hover:shadow-md ${
       isSent 
-        ? 'bg-[#effbf5] border-[#bfe7d2] md:ml-8' 
-        : 'bg-[#edf7f5] border-[#cce2da] md:mr-8'
+        ? 'bg-[#effbf5] border-[#bfe7d2] md:ml-4' 
+        : 'bg-[#edf7f5] border-[#cce2da] md:mr-4'
     }`}>
       {/* File Icon or Download Progress */}
-      <div className="relative flex-shrink-0 scale-90 md:scale-100 origin-top">
+      <div className="relative flex-shrink-0 scale-90 md:scale-95 origin-top">
         {isThisFileDownloading ? (
           <div className="flex flex-col items-center gap-1">
             <div className="relative inline-flex items-center justify-center">
-              <CircularProgress progress={downloadProgress} size={56} strokeWidth={4} />
-              {renderCancelInProgress(56)}
+              <CircularProgress progress={downloadProgress} size={48} strokeWidth={4} />
+              {renderCancelInProgress(48)}
             </div>
             <div className="text-[10px] text-blue-600 font-medium mt-1">
               {downloadStage === 'downloading' && '📥'}
@@ -228,7 +228,7 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
       </div>
       
       <div className="flex-1 min-w-0 w-full">
-        <div className="flex flex-col md:flex-row items-start justify-between gap-3 md:gap-2">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-2 md:gap-2">
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-gray-900 truncate">{name}</div>
             <div className="flex items-center gap-2 mt-1">
