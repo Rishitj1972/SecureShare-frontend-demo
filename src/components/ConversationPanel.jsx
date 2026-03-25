@@ -1074,7 +1074,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
 
       {isGroupMode && groupObj && showGroupInfo && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="w-full md:max-w-md h-[86vh] md:h-auto bg-white rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+          <div className="w-full md:max-w-sm h-[74vh] md:h-[70vh] bg-white rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
             <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
               <div className="text-sm font-semibold text-slate-800">Group Info</div>
               <button
@@ -1101,13 +1101,13 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
               <div className="text-xs text-slate-500">{visibleGroupMembers.length} participants</div>
             </div>
 
-            <div className="flex-1 overflow-auto p-4">
+            <div className="flex-1 overflow-hidden p-4">
               {loadingGroupMembers ? (
                 <div className="text-xs text-gray-500">Loading members...</div>
               ) : visibleGroupMembers.length === 0 ? (
                 <div className="text-xs text-gray-500">No members found.</div>
               ) : (
-                <div className="space-y-2">
+                <div className="max-h-full overflow-y-auto custom-scrollbar space-y-2 pr-1">
                   {visibleGroupMembers.map((member) => (
                     <div key={member.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border border-slate-100">
                       <div className="flex items-center gap-2 min-w-0">
