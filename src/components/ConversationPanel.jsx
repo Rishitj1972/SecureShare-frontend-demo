@@ -97,6 +97,16 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       email: member.user.email
     }))
 
+  const visibleGroupMembers = groupMembers
+    .filter((member) => member?.user?._id)
+    .map((member) => ({
+      id: member.user._id,
+      name: member.user.username || member.user.email,
+      email: member.user.email,
+      status: member.status,
+      role: member.role
+    }))
+
   const removableMembers = groupMembers
     .filter((member) => {
       const memberUserId = member?.user?._id || member?.user
@@ -756,6 +766,50 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
             )}
           </div>
         </div>
+
+        {isGroupMode && groupObj && (
+          <div className="mt-3 border rounded-lg p-3 bg-white">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs md:text-sm font-semibold text-gray-800">Group members</div>
+              <div className="text-[11px] text-gray-500">{visibleGroupMembers.length} total</div>
+            </div>
+
+            {loadingGroupMembers ? (
+              <div className="text-xs text-gray-500">Loading members...</div>
+            ) : (
+              <div className="max-h-36 overflow-auto border rounded p-2 bg-gray-50">
+                {visibleGroupMembers.length === 0 && (
+                  <div className="text-xs text-gray-500">No members found.</div>
+                )}
+
+                {visibleGroupMembers.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between gap-2 py-1.5 border-b last:border-b-0">
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium truncate text-gray-800">{member.name}</div>
+                      {member.email && <div className="text-[11px] text-gray-500 truncate">{member.email}</div>}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {member.role === 'owner' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">Admin</span>
+                      )}
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded ${
+                          member.status === 'accepted'
+                            ? 'bg-green-100 text-green-700'
+                            : member.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {member.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {isGroupMode && groupObj && isGroupOwner && showAddMembers && (
           <div className="mt-3 border rounded-lg p-3 bg-emerald-50">
