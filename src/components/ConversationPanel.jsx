@@ -56,6 +56,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const [isAddingMembers, setIsAddingMembers] = useState(false)
   const [removingMemberId, setRemovingMemberId] = useState(null)
   const [showEditGroup, setShowEditGroup] = useState(false)
+  const [showGroupInfo, setShowGroupInfo] = useState(false)
   const [editingGroupName, setEditingGroupName] = useState('')
   const [editingAdminId, setEditingAdminId] = useState('')
   const [groupPhotoFile, setGroupPhotoFile] = useState(null)
@@ -103,6 +104,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
       id: member.user._id,
       name: member.user.username || member.user.email,
       email: member.user.email,
+      profilePhoto: member.user.profilePhoto || null,
       status: member.status,
       role: member.role
     }))
@@ -159,6 +161,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   useEffect(() => {
     setShowAddMembers(false)
     setShowEditGroup(false)
+    setShowGroupInfo(false)
     setSelectedNewMemberIds([])
     setGroupPhotoFile(null)
     setGroupPhotoPreview('')
@@ -633,7 +636,12 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
     <div className="h-full p-3 md:p-4 flex flex-col bg-[#fafffd]">
       <div className="border-b border-[#d8e7e1] pb-3 mb-3">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-0">
-          <div className="flex items-center gap-3 min-w-0">
+          <div
+            className={`flex items-center gap-3 min-w-0 ${isGroupMode ? 'cursor-pointer' : ''}`}
+            onClick={() => {
+              if (isGroupMode) setShowGroupInfo(true)
+            }}
+          >
             {isGroupMode ? (
               groupObj?.groupPhoto ? (
                 <img
@@ -681,6 +689,20 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="text-[11px] md:text-xs bg-[#e6f6f2] text-[#0c6f63] px-2 py-1 rounded-lg font-mono whitespace-nowrap">v5.0.0 E2EE</div>
+            {isGroupMode && groupObj && (
+              <button
+                onClick={() => setShowGroupInfo(true)}
+                title="Group Info"
+                aria-label="Group Info"
+                className="w-9 h-9 inline-flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md font-medium transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </button>
+            )}
             {isGroupMode && groupObj && isGroupOwner && (
               <>
                 <button
@@ -766,50 +788,6 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
             )}
           </div>
         </div>
-
-        {isGroupMode && groupObj && (
-          <div className="mt-3 border rounded-lg p-3 bg-white">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs md:text-sm font-semibold text-gray-800">Group members</div>
-              <div className="text-[11px] text-gray-500">{visibleGroupMembers.length} total</div>
-            </div>
-
-            {loadingGroupMembers ? (
-              <div className="text-xs text-gray-500">Loading members...</div>
-            ) : (
-              <div className="max-h-36 overflow-auto border rounded p-2 bg-gray-50">
-                {visibleGroupMembers.length === 0 && (
-                  <div className="text-xs text-gray-500">No members found.</div>
-                )}
-
-                {visibleGroupMembers.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between gap-2 py-1.5 border-b last:border-b-0">
-                    <div className="min-w-0">
-                      <div className="text-xs font-medium truncate text-gray-800">{member.name}</div>
-                      {member.email && <div className="text-[11px] text-gray-500 truncate">{member.email}</div>}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {member.role === 'owner' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">Admin</span>
-                      )}
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded ${
-                          member.status === 'accepted'
-                            ? 'bg-green-100 text-green-700'
-                            : member.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-gray-100 text-gray-600'
-                        }`}
-                      >
-                        {member.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {isGroupMode && groupObj && isGroupOwner && showAddMembers && (
           <div className="mt-3 border rounded-lg p-3 bg-emerald-50">
@@ -1092,6 +1070,86 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
           </div>
         )}
       </div>
+      )}
+
+      {isGroupMode && groupObj && showGroupInfo && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center p-0 md:p-4">
+          <div className="w-full md:max-w-md h-[86vh] md:h-auto bg-white rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <div className="text-sm font-semibold text-slate-800">Group Info</div>
+              <button
+                onClick={() => setShowGroupInfo(false)}
+                className="px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-slate-100 flex flex-col items-center gap-2">
+              {groupObj?.groupPhoto ? (
+                <img
+                  src={getPhotoUrl(groupObj.groupPhoto, groupObj.updatedAt)}
+                  alt={groupObj?.name || 'Group'}
+                  className="w-20 h-20 rounded-full object-cover border"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center text-xl font-semibold text-indigo-700">
+                  {getInitials(groupObj?.name || 'Group')}
+                </div>
+              )}
+              <div className="text-base font-semibold text-slate-900">{groupObj?.name || 'Group'}</div>
+              <div className="text-xs text-slate-500">{visibleGroupMembers.length} participants</div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4">
+              {loadingGroupMembers ? (
+                <div className="text-xs text-gray-500">Loading members...</div>
+              ) : visibleGroupMembers.length === 0 ? (
+                <div className="text-xs text-gray-500">No members found.</div>
+              ) : (
+                <div className="space-y-2">
+                  {visibleGroupMembers.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border border-slate-100">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {member.profilePhoto ? (
+                          <img
+                            src={getPhotoUrl(member.profilePhoto)}
+                            alt={member.name}
+                            className="w-9 h-9 rounded-full object-cover border"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-600">
+                            {getInitials(member.name)}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate text-slate-800">{member.name}</div>
+                          {member.email && <div className="text-[11px] text-slate-500 truncate">{member.email}</div>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {member.role === 'owner' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">Admin</span>
+                        )}
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded ${
+                            member.status === 'accepted'
+                              ? 'bg-green-100 text-green-700'
+                              : member.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {member.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
