@@ -66,6 +66,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
   const [isLeavingGroup, setIsLeavingGroup] = useState(false)
   const mounted = useRef(true)
   const listRef = useRef(null)
+  const downloadAbortControllerRef = useRef(null)
   const { uploadFile, cancelUpload } = useChunkedUpload()
   const { encryptFileForUpload, encryptFileForGroupUpload, getReceiverPublicKey } = useFileEncryption()
   const { downloadAndDecrypt } = useFileDecryption()
@@ -537,6 +538,9 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
     }
 
     try{
+      const controller = new AbortController()
+      downloadAbortControllerRef.current = controller
+
       setIsDownloading(true)
       setDownloadingFileId(fileId)
       setDownloadProgress(0)
@@ -576,7 +580,8 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
           } else if (stage === 'verifying' && cumulativeProgress === 90) {
             showNotification && showNotification('Verifying integrity...', 'info')
           }
-        }
+        },
+        controller.signal
       )
 
       // Trigger download
@@ -598,15 +603,25 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
         'success'
       )
     }catch(err){
-      const errorMsg = err?.message || 'Download failed'
-      showNotification && showNotification(errorMsg, 'error')
-      console.error('Download error:', err)
+      if (err?.name === 'AbortError') {
+        showNotification && showNotification('Download cancelled', 'info')
+      } else {
+        const errorMsg = err?.message || 'Download failed'
+        showNotification && showNotification(errorMsg, 'error')
+        console.error('Download error:', err)
+      }
     } finally {
+      downloadAbortControllerRef.current = null
       setIsDownloading(false)
       setDownloadingFileId(null)
       setDownloadProgress(0)
       setDownloadStage('')
     }
+  }
+
+  const handleCancelDownload = () => {
+    if (!downloadAbortControllerRef.current) return
+    downloadAbortControllerRef.current.abort()
   }
 
   const handleUnfriend = async () => {
@@ -971,6 +986,7 @@ export default function ConversationPanel({ userId, userObj, groupObj, friends =
                 downloadingFileId={downloadingFileId}
                 downloadProgress={downloadProgress}
                 downloadStage={downloadStage}
+                onCancelDownload={handleCancelDownload}
                 onDownload={() => onDownload(f._id, f)} 
                 onDelete={async (id) => {
                   if (isGroupMode && !isGroupOwner) {

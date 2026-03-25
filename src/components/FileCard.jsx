@@ -87,7 +87,7 @@ function formatShortTime(value) {
   })
 }
 
-export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMode = false, currentUserId, canDelete = true, isDownloading, downloadingFileId, downloadProgress, downloadStage }){
+export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMode = false, currentUserId, canDelete = true, isDownloading, downloadingFileId, downloadProgress, downloadStage, onCancelDownload }){
   const name = file.originalFileName || file.originalName || 'file'
   const sizeFormatted = formatFileSize(file.fileSize)
   const time = file.createdAt ? formatShortTime(file.createdAt) : ''
@@ -97,6 +97,23 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
   
   // Check if this specific file is being downloaded
   const isThisFileDownloading = isDownloading && !isSent && downloadingFileId === file._id
+
+  const renderCancelInProgress = (size) => {
+    if (!isThisFileDownloading || typeof onCancelDownload !== 'function') return null
+
+    return (
+      <button
+        type="button"
+        onClick={onCancelDownload}
+        title="Cancel download"
+        aria-label="Cancel download"
+        className="absolute inset-0 m-auto inline-flex items-center justify-center rounded-full bg-white/90 text-red-600 border border-red-200 shadow-sm hover:bg-white"
+        style={{ width: Math.round(size * 0.42), height: Math.round(size * 0.42) }}
+      >
+        <span className="text-base leading-none font-bold">×</span>
+      </button>
+    )
+  }
 
   if (isGroupMode) {
     return (
@@ -124,7 +141,10 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
         <div className="flex items-start gap-2">
           <div className="relative flex-shrink-0 scale-75 origin-top-left">
             {isThisFileDownloading ? (
-              <CircularProgress progress={downloadProgress} size={44} strokeWidth={3} />
+              <div className="relative inline-flex items-center justify-center">
+                <CircularProgress progress={downloadProgress} size={44} strokeWidth={3} />
+                {renderCancelInProgress(44)}
+              </div>
             ) : (
               <FileIcon mime={file.mimeType} />
             )}
@@ -191,7 +211,10 @@ export default function FileCard({ file, onDownload, onDelete, isSent, isGroupMo
       <div className="relative flex-shrink-0 scale-90 md:scale-100 origin-top">
         {isThisFileDownloading ? (
           <div className="flex flex-col items-center gap-1">
-            <CircularProgress progress={downloadProgress} size={56} strokeWidth={4} />
+            <div className="relative inline-flex items-center justify-center">
+              <CircularProgress progress={downloadProgress} size={56} strokeWidth={4} />
+              {renderCancelInProgress(56)}
+            </div>
             <div className="text-[10px] text-blue-600 font-medium mt-1">
               {downloadStage === 'downloading' && '📥'}
               {downloadStage === 'decrypting' && '🔓'}

@@ -7,6 +7,17 @@ import api from '../api/axios'
  * Hook for decrypting downloaded files
  */
 export function useFileDecryption() {
+  const createAbortError = () => {
+    const error = new Error('Download cancelled')
+    error.name = 'AbortError'
+    return error
+  }
+
+  const throwIfAborted = (signal) => {
+    if (signal?.aborted) {
+      throw createAbortError()
+    }
+  }
   
   /**
    * Download and decrypt a file
@@ -14,10 +25,13 @@ export function useFileDecryption() {
    * @param {string} userId - Current user ID
    * @param {Object} fileMeta - File metadata (contains encryption data)
    * @param {Function} onProgress - Progress callback (progress, stage)
+   * @param {AbortSignal} signal - Optional abort signal
    * @returns {Blob} Decrypted file blob
    */
-  const downloadAndDecrypt = useCallback(async (fileId, userId, fileMeta, onProgress = null) => {
+  const downloadAndDecrypt = useCallback(async (fileId, userId, fileMeta, onProgress = null, signal = null) => {
     try {
+      throwIfAborted(signal)
+
       // Step 1: Download encrypted file
       const token = localStorage.getItem('token')
       if (!token) {
@@ -28,7 +42,7 @@ export function useFileDecryption() {
       
       onProgress?.(0, 'downloading')
       
-      const response = await fetch(downloadUrl)
+      const response = await fetch(downloadUrl, { signal })
       if (!response.ok) {
         throw new Error('Download failed')
       }
@@ -37,10 +51,14 @@ export function useFileDecryption() {
       const totalSize = parseInt(response.headers.get('content-length') || '0')
       
       if (totalSize === 0 || !response.body) {
+        throwIfAborted(signal)
+
         // Fallback if streaming not supported
         onProgress?.(50, 'downloading')
         const encryptedBlob = await response.blob()
         onProgress?.(100, 'downloading')
+
+        throwIfAborted(signal)
         
         if (!fileMeta.isEncrypted) {
           return encryptedBlob
@@ -53,8 +71,10 @@ export function useFileDecryption() {
           throw new Error('Private key not found. Cannot decrypt file.')
         }
         const aesKey = await decryptAESKey(fileMeta.encryptedAesKey, privateKey)
+        throwIfAborted(signal)
         onProgress?.(50, 'decrypting')
         const decryptedBlob = await decryptFile(encryptedBlob, aesKey, fileMeta.iv)
+        throwIfAborted(signal)
         onProgress?.(100, 'decrypting')
         
         return decryptedBlob
@@ -66,6 +86,7 @@ export function useFileDecryption() {
       let receivedLength = 0
       
       while (true) {
+        throwIfAborted(signal)
         const { done, value } = await reader.read()
         
         if (done) break
@@ -79,6 +100,7 @@ export function useFileDecryption() {
       }
       
       // Combine chunks into single Uint8Array
+      throwIfAborted(signal)
       const allChunks = new Uint8Array(receivedLength)
       let position = 0
       for (const chunk of chunks) {
@@ -95,6 +117,7 @@ export function useFileDecryption() {
       }
 
       // Step 2: Decryption process
+      throwIfAborted(signal)
       onProgress?.(0, 'decrypting')
       
       // Get private key
@@ -107,11 +130,13 @@ export function useFileDecryption() {
 
       // Step 3: Decrypt AES key
       const aesKey = await decryptAESKey(fileMeta.encryptedAesKey, privateKey)
+      throwIfAborted(signal)
       
       onProgress?.(40, 'decrypting')
 
       // Step 4: Decrypt file
       const decryptedBlob = await decryptFile(encryptedBlob, aesKey, fileMeta.iv)
+      throwIfAborted(signal)
       
       onProgress?.(80, 'decrypting')
 
@@ -119,6 +144,7 @@ export function useFileDecryption() {
       // Note: For large files (>100MB), server encrypts them, so hash verification is complex
       // We verify hash for client-encrypted files only (small files)
       if (fileMeta.fileHash && fileMeta.iv && encryptedBlob.size <= 100 * 1024 * 1024) {
+        throwIfAborted(signal)
         onProgress?.(90, 'verifying')
         
         // Read blob once to prevent read errors
@@ -135,6 +161,9 @@ export function useFileDecryption() {
       onProgress?.(100, 'complete')
       return decryptedBlob
     } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw error
+      }
       console.error('Decryption failed:', error)
       throw error
     }
