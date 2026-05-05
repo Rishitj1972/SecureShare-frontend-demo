@@ -47,7 +47,6 @@ export function useChunkedUpload() {
           file,
           chunkSize,
           totalChunks,
-          parallel,
           uploadedChunks: [],
           progress: 0,
           status: 'initializing',
@@ -299,6 +298,15 @@ export function useChunkedUpload() {
       // Create AbortController for this upload
       abortControllers.current[uploadId] = new AbortController()
       pauseRequested.current[uploadId] = false
+
+      // Store parallel setting for this upload session
+      setUploads(prev => ({
+        ...prev,
+        [uploadId]: {
+          ...prev[uploadId],
+          parallel
+        }
+      }))
 
       if (onProgress) onProgress(1)
 
