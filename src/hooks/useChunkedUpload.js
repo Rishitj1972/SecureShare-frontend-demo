@@ -358,6 +358,15 @@ export function useChunkedUpload() {
     }
   }, [initUpload, runUploadSession])
 
+  const getUploadStatus = useCallback(async (uploadId) => {
+    try {
+      const res = await api.get(`/files/chunked/status/${uploadId}`)
+      return res.data
+    } catch (error) {
+      throw error
+    }
+  }, [])
+
   const resumeUpload = useCallback(async (uploadId, onProgress, onUploadIdReady) => {
     const uploadState = uploads[uploadId]
 
@@ -418,15 +427,6 @@ export function useChunkedUpload() {
       throw error
     }
   }, [getUploadStatus, runUploadSession, uploads])
-
-  const getUploadStatus = useCallback(async (uploadId) => {
-    try {
-      const res = await api.get(`/files/chunked/status/${uploadId}`)
-      return res.data
-    } catch (error) {
-      throw error
-    }
-  }, [])
 
   const cancelUpload = useCallback(async (uploadId) => {
     try {
