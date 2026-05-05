@@ -309,6 +309,16 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
           {isPaused && (
             <div className="text-xs text-amber-700 mt-2 font-medium">⏸ Upload paused. You can resume from the same chunk position.</div>
           )}
+          {/* Visible debug panel for troubleshooting Pause/Resume visibility (temporary) */}
+          <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-700">
+            <div><strong>Debug</strong></div>
+            <div>currentUploadId: {currentUploadId || '—'}</div>
+            <div>active status: {activeUpload?.status || '—'}</div>
+            <div>isUploading: {String(isUploading)}</div>
+            <div>isPaused: {String(isPaused)}</div>
+            <div>uploadStarted: {String(uploadStarted)}</div>
+            <div>progress: {uploadProgress}%</div>
+          </div>
           <div className="flex gap-2 mt-3">
             {activeUpload?.status === 'uploading' && !isPaused && (
               <button
