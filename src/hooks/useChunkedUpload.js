@@ -5,7 +5,6 @@ import CryptoJS from 'crypto-js'
 export function useChunkedUpload() {
   const [uploads, setUploads] = useState({}) // uploadId -> upload state
   const abortControllers = useRef({}) // uploadId -> AbortController
-  const pauseRequested = useRef({}) // uploadId -> pause requested flag
 
   const sleep = useCallback((ms) => new Promise((resolve) => setTimeout(resolve, ms)), [])
 
@@ -13,12 +12,6 @@ export function useChunkedUpload() {
     // Convert Uint8Array to hex string for hashing
     const wordArray = CryptoJS.lib.WordArray.create(chunk)
     return CryptoJS.SHA256(wordArray).toString()
-  }, [])
-
-  const getChunkSizeForNumber = useCallback((chunkNumber, chunkSize, fileSize) => {
-    const start = (chunkNumber - 1) * chunkSize
-    const end = Math.min(start + chunkSize, fileSize)
-    return end - start
   }, [])
 
   const initUpload = useCallback(async (file, receiverId, preferredChunkSize, encryptionData = null, groupId = null, groupShareId = null) => {
@@ -118,13 +111,6 @@ export function useChunkedUpload() {
         
         // Check if upload was cancelled
         if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
-          if (pauseRequested.current[uploadId]) {
-            const pauseError = new Error('Upload paused')
-            pauseError.code = 'UPLOAD_PAUSED'
-            pauseError.uploadId = uploadId
-            throw pauseError
-          }
-
           throw error // Don't retry if cancelled
         }
         
@@ -152,137 +138,6 @@ export function useChunkedUpload() {
     throw lastError
   }, [calculateChunkHash, sleep])
 
-  const runUploadSession = useCallback(async ({
-    uploadId,
-    file,
-    chunkSize,
-    totalChunks,
-    parallel,
-    uploadedChunks = [],
-    onProgress,
-    onUploadIdReady,
-    fileHash = null
-  }) => {
-    const uploadSet = new Set(uploadedChunks)
-    const chunkSizes = {}
-    const inFlightProgress = {}
-
-    for (const chunkNumber of uploadSet) {
-      chunkSizes[chunkNumber] = getChunkSizeForNumber(chunkNumber, chunkSize, file.size)
-      inFlightProgress[chunkNumber] = 100
-    }
-
-    let lastReportedProgress = 0
-
-    const reportProgressFromBytes = () => {
-      const totalBytes = file.size
-      let uploadedBytes = 0
-
-      for (const key in chunkSizes) {
-        const size = chunkSizes[key]
-        const percent = inFlightProgress[key] ?? 0
-        uploadedBytes += (percent / 100) * size
-      }
-
-      const progress = Math.min(95, Math.max(1, Math.round((uploadedBytes / totalBytes) * 95)))
-      if (progress > lastReportedProgress) {
-        lastReportedProgress = progress
-        if (onProgress) {
-          onProgress(progress)
-        }
-      }
-    }
-
-    if (onUploadIdReady) {
-      onUploadIdReady(uploadId)
-    }
-
-    // Update status to 'uploading' so UI can show pause button
-    setUploads(prev => ({
-      ...prev,
-      [uploadId]: {
-        ...prev[uploadId],
-        status: 'uploading'
-      }
-    }))
-
-    reportProgressFromBytes()
-
-    for (let i = 1; i <= totalChunks; i += parallel) {
-      const batch = []
-      for (let j = 0; j < parallel && i + j <= totalChunks; j++) {
-        const chunkNum = i + j
-        if (uploadSet.has(chunkNum)) {
-          continue
-        }
-
-        const start = (chunkNum - 1) * chunkSize
-        const end = Math.min(start + chunkSize, file.size)
-        const chunk = file.slice(start, end)
-
-        chunkSizes[chunkNum] = chunk.size
-        inFlightProgress[chunkNum] = 0
-
-        batch.push(
-          uploadChunk(uploadId, chunkNum, chunk, totalChunks, (percent) => {
-            inFlightProgress[chunkNum] = percent
-            reportProgressFromBytes()
-          }).then(() => {
-            uploadSet.add(chunkNum)
-            inFlightProgress[chunkNum] = 100
-            reportProgressFromBytes()
-          })
-        )
-      }
-
-      if (batch.length === 0) {
-        continue
-      }
-
-      await Promise.all(batch)
-    }
-
-    if (onProgress) onProgress(96)
-
-    let completeRes
-    try {
-      completeRes = await api.post('/files/chunked/complete', {
-        uploadId,
-        fileHash
-      }, {
-        timeout: 1800000,
-        signal: abortControllers.current[uploadId]?.signal
-      })
-    } catch (error) {
-      if ((error.name === 'CanceledError' || error.code === 'ERR_CANCELED') && pauseRequested.current[uploadId]) {
-        const pauseError = new Error('Upload paused')
-        pauseError.code = 'UPLOAD_PAUSED'
-        pauseError.uploadId = uploadId
-        throw pauseError
-      }
-
-      throw error
-    }
-
-    if (onProgress) onProgress(100)
-
-    setUploads(prev => ({
-      ...prev,
-      [uploadId]: {
-        ...prev[uploadId],
-        uploadedChunks: Array.from(uploadSet).sort((a, b) => a - b),
-        progress: 100,
-        status: 'completed',
-        fileId: completeRes.data.fileId
-      }
-    }))
-
-    delete abortControllers.current[uploadId]
-    delete pauseRequested.current[uploadId]
-
-    return { success: true, fileId: completeRes.data.fileId, uploadId }
-  }, [getChunkSizeForNumber, uploadChunk])
-
   const uploadFile = useCallback(async (file, receiverId, onProgress, onUploadIdReady, encryptionData = null, groupId = null, groupShareId = null) => {
     const fileSizeInMB = file.size / (1024 * 1024);
 
@@ -306,56 +161,92 @@ export function useChunkedUpload() {
 
       // Create AbortController for this upload
       abortControllers.current[uploadId] = new AbortController()
-      pauseRequested.current[uploadId] = false
 
-      // Store parallel setting for this upload session
+      // Notify caller that uploadId is ready
+      if (onUploadIdReady) {
+        onUploadIdReady(uploadId)
+      }
+
+      if (onProgress) onProgress(1)
+
+      let completedChunks = 0
+      let lastReportedProgress = 1
+      const chunkSizes = {}
+      const inFlightProgress = {}
+
+      const reportProgressFromBytes = () => {
+        const totalBytes = file.size
+        let uploadedBytes = 0
+
+        // Optimize by iterating directly over entries
+        for (const key in chunkSizes) {
+          const size = chunkSizes[key]
+          const percent = inFlightProgress[key] ?? 0
+          uploadedBytes += (percent / 100) * size
+        }
+
+        const progress = Math.min(95, Math.max(1, Math.round((uploadedBytes / totalBytes) * 95)))
+        if (progress > lastReportedProgress) {
+          lastReportedProgress = progress
+          if (onProgress) {
+            onProgress(progress)
+          }
+        }
+      }
+
+      for (let i = 1; i <= totalChunks; i += parallel) {
+        const batch = []
+        for (let j = 0; j < parallel && i + j <= totalChunks; j++) {
+          const chunkNum = i + j
+          const start = (chunkNum - 1) * chunkSize
+          const end = Math.min(start + chunkSize, file.size)
+          const chunk = file.slice(start, end)
+
+          chunkSizes[chunkNum] = chunk.size
+          inFlightProgress[chunkNum] = 0
+
+          batch.push(
+            uploadChunk(uploadId, chunkNum, chunk, totalChunks, (percent) => {
+              inFlightProgress[chunkNum] = percent
+              reportProgressFromBytes()
+            }).then(() => {
+              completedChunks++
+              inFlightProgress[chunkNum] = 100
+              reportProgressFromBytes()
+            })
+          )
+        }
+        await Promise.all(batch)
+      }
+
+      if (onProgress) onProgress(96)
+      const completeRes = await api.post('/files/chunked/complete', {
+        uploadId,
+        fileHash: null
+      }, {
+        timeout: 1800000 // 30 minutes timeout for finalization
+      })
+
+      if (onProgress) onProgress(100)
+
       setUploads(prev => ({
         ...prev,
         [uploadId]: {
           ...prev[uploadId],
-          parallel
+          status: 'completed',
+          fileId: completeRes.data.fileId
         }
       }))
 
-      if (onProgress) onProgress(1)
+      // Clean up AbortController
+      delete abortControllers.current[uploadId]
 
-      try {
-        return await runUploadSession({
-          uploadId,
-          file,
-          chunkSize,
-          totalChunks,
-          parallel,
-          uploadedChunks: [],
-          onProgress,
-          onUploadIdReady,
-          fileHash: null
-        })
-      } catch (error) {
-        if (error.code === 'UPLOAD_PAUSED') {
-          setUploads(prev => ({
-            ...prev,
-            [uploadId]: {
-              ...prev[uploadId],
-              status: 'paused',
-              error: null
-            }
-          }))
-          delete abortControllers.current[uploadId]
-          return { paused: true, uploadId }
-        }
-
-        throw error
-      }
+      return { success: true, fileId: completeRes.data.fileId, uploadId }
     };
 
     try {
       return await runUpload(pickSettings(0))
     } catch (error) {
-      if (error.code === 'UPLOAD_PAUSED') {
-        return { paused: true, uploadId: error.uploadId }
-      }
-
       // Check if upload was cancelled
       if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
         throw new Error('Upload cancelled')
@@ -373,7 +264,7 @@ export function useChunkedUpload() {
       }
       throw error
     }
-  }, [initUpload, runUploadSession])
+  }, [initUpload, uploadChunk])
 
   const getUploadStatus = useCallback(async (uploadId) => {
     try {
@@ -384,67 +275,6 @@ export function useChunkedUpload() {
     }
   }, [])
 
-  const resumeUpload = useCallback(async (uploadId, onProgress, onUploadIdReady) => {
-    const uploadState = uploads[uploadId]
-
-    if (!uploadState) {
-      throw new Error('Upload session not found locally')
-    }
-
-    if (!uploadState.file) {
-      throw new Error('Cannot resume upload: file is no longer available')
-    }
-
-    const serverStatus = await getUploadStatus(uploadId)
-    const uploadedChunks = Array.from(new Set([
-      ...(serverStatus.uploadedChunks || []),
-      ...(uploadState.uploadedChunks || [])
-    ]))
-
-    pauseRequested.current[uploadId] = false
-    abortControllers.current[uploadId] = new AbortController()
-
-    setUploads(prev => ({
-      ...prev,
-      [uploadId]: {
-        ...prev[uploadId],
-        uploadedChunks,
-        status: 'uploading',
-        error: null,
-        startTime: prev[uploadId]?.startTime || Date.now()
-      }
-    }))
-
-    try {
-      return await runUploadSession({
-        uploadId,
-        file: uploadState.file,
-        chunkSize: uploadState.chunkSize,
-        totalChunks: uploadState.totalChunks,
-        parallel: uploadState.parallel || 1,
-        uploadedChunks,
-        onProgress,
-        onUploadIdReady,
-        fileHash: uploadState.fileHash || null
-      })
-    } catch (error) {
-      if (error.code === 'UPLOAD_PAUSED') {
-        setUploads(prev => ({
-          ...prev,
-          [uploadId]: {
-            ...prev[uploadId],
-            status: 'paused',
-            error: null
-          }
-        }))
-        delete abortControllers.current[uploadId]
-        return { paused: true, uploadId }
-      }
-
-      throw error
-    }
-  }, [getUploadStatus, runUploadSession, uploads])
-
   const cancelUpload = useCallback(async (uploadId) => {
     try {
       // Abort ongoing requests
@@ -452,7 +282,6 @@ export function useChunkedUpload() {
         abortControllers.current[uploadId].abort()
         delete abortControllers.current[uploadId]
       }
-      delete pauseRequested.current[uploadId]
 
       // Update local state immediately
       setUploads(prev => ({
@@ -481,33 +310,12 @@ export function useChunkedUpload() {
     }
   }, [])
 
-  const pauseUpload = useCallback(async (uploadId) => {
-    if (!uploadId) return
-
-    pauseRequested.current[uploadId] = true
-
-    if (abortControllers.current[uploadId]) {
-      abortControllers.current[uploadId].abort()
-    }
-
-    setUploads(prev => ({
-      ...prev,
-      [uploadId]: {
-        ...prev[uploadId],
-        status: 'paused',
-        error: null
-      }
-    }))
-  }, [])
-
   return {
     uploads,
     uploadFile,
     initUpload,
     uploadChunk,
     getUploadStatus,
-    cancelUpload,
-    pauseUpload,
-    resumeUpload
+    cancelUpload
   }
 }
