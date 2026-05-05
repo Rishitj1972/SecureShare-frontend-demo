@@ -351,7 +351,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
             className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors font-medium shadow-md hover:shadow-lg"
             title="Cancel upload"
           >
-            Cancel
+            Cancell
           </button>
         )}
       </div>
