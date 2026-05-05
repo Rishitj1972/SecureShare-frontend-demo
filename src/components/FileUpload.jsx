@@ -314,7 +314,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
         >
           {isPaused ? 'Paused' : isUploading ? 'Uploading...' : 'Upload File'}
         </button>
-        {currentUploadId && activeUpload?.status === 'uploading' && (
+        {isUploading && currentUploadId && !isPaused && (
           <button
             onClick={handlePause}
             className="px-6 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors font-medium shadow-md hover:shadow-lg"
@@ -332,7 +332,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
             Resume
           </button>
         )}
-        {currentUploadId && (isUploading || uploadStarted || isPaused) && (
+        {(isUploading || uploadStarted || isPaused) && currentUploadId && (
           <button
             onClick={handleCancel}
             className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors font-medium shadow-md hover:shadow-lg"
