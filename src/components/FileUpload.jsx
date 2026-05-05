@@ -353,7 +353,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
 
       {uploadProgress === 100 && !isUploading && (
         <div className="mb-4 p-3 bg-green-100 text-green-800 rounded">
-          ✓ Upload completed successfully!
+          ✓ Upload completed successfully! Rishi
         </div>
       )}
 
