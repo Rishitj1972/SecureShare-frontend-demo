@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useChunkedUpload } from '../hooks/useChunkedUpload'
 
 export default function FileUpload({ recipientId, onUploadComplete }) {
@@ -17,6 +17,18 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
 
   const activeUpload = currentUploadId ? uploads[currentUploadId] : null
   const isPaused = activeUpload?.status === 'paused'
+
+  useEffect(() => {
+    // Debug logging to help diagnose why Pause/Resume buttons don't appear
+    console.debug('FileUpload debug:', {
+      currentUploadId,
+      isUploading,
+      uploadStarted,
+      uploadProgress,
+      isPaused,
+      activeUpload
+    })
+  }, [currentUploadId, isUploading, uploadStarted, uploadProgress, isPaused, activeUpload])
 
   const updateProgress = (progress) => {
     if (!selectedFile) return
