@@ -5,14 +5,13 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
   const fileInputRef = useRef(null)
   const [selectedFile, setSelectedFile] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
   const [uploadError, setUploadError] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadSpeed, setUploadSpeed] = useState(0)
   const [timeRemaining, setTimeRemaining] = useState(null)
   const [currentUploadId, setCurrentUploadId] = useState(null)
   const [uploadStarted, setUploadStarted] = useState(false)
-  const { uploadFile, cancelUpload, pauseUpload, resumeUpload, continueFileUpload } = useChunkedUpload()
+  const { uploadFile, cancelUpload } = useChunkedUpload()
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0]
@@ -143,97 +142,12 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
         setUploadSpeed(0)
         setTimeRemaining(null)
         setIsUploading(false)
-        setIsPaused(false)
         setUploadStarted(false)
         setCurrentUploadId(null)
         setSelectedFile(null)
         if (fileInputRef.current) fileInputRef.current.value = ''
       } catch (error) {
         console.error('Error cancelling upload:', error)
-      }
-    }
-  }
-
-  const handlePause = async () => {
-    if (currentUploadId) {
-      try {
-        await pauseUpload(currentUploadId)
-        setIsUploading(false)
-        setIsPaused(true)
-        setUploadSpeed(0)
-      } catch (error) {
-        console.error('Error pausing upload:', error)
-        setUploadError(error.message || 'Failed to pause upload')
-      }
-    }
-  }
-
-  const handleResume = async () => {
-    if (currentUploadId && isPaused && selectedFile) {
-      try {
-        const resumeResponse = await resumeUpload(currentUploadId)
-        setIsUploading(true)
-        setIsPaused(false)
-        setUploadError(null)
-        
-        // Track the time used before pause
-        const startTime = Date.now()
-        let lastProgress = uploadProgress
-
-        // Continue uploading remaining chunks
-        const result = await continueFileUpload(
-          currentUploadId,
-          selectedFile,
-          (progress) => {
-            lastProgress = Math.max(lastProgress, Math.round(progress))
-            setUploadProgress(lastProgress)
-            
-            const now = Date.now()
-            const elapsedTime = (now - startTime) / 1000
-            
-            if (lastProgress > uploadProgress && elapsedTime > 1) {
-              const bytesUploaded = (lastProgress / 100) * selectedFile.size
-              const speed = bytesUploaded / elapsedTime
-              setUploadSpeed(speed)
-              
-              if (lastProgress < 100 && speed > 0) {
-                const bytesRemaining = selectedFile.size - bytesUploaded
-                const timeLeft = bytesRemaining / speed
-                setTimeRemaining(timeLeft)
-              }
-            }
-          }
-        )
-
-        if (result.success) {
-          const endTime = Date.now()
-          const totalTime = (endTime - startTime) / 1000
-          const avgSpeed = selectedFile.size / totalTime
-          
-          setUploadProgress(100)
-          setTimeRemaining(0)
-          setSelectedFile(null)
-          if (fileInputRef.current) fileInputRef.current.value = ''
-
-          onUploadComplete?.({
-            fileId: result.fileId,
-            filename: selectedFile.name,
-            size: selectedFile.size,
-            uploadTime: totalTime,
-            avgSpeed
-          })
-
-          setTimeout(() => {
-            setUploadProgress(0)
-            setUploadSpeed(0)
-            setUploadStarted(false)
-          }, 2000)
-        }
-      } catch (error) {
-        console.error('Error resuming upload:', error)
-        setUploadError(error.message || 'Failed to resume upload')
-      } finally {
-        setIsUploading(false)
       }
     }
   }
@@ -270,9 +184,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
       {(isUploading || uploadStarted) && (
         <div className="mb-4">
           <div className="flex justify-between mb-2">
-            <span className="text-sm font-bold text-blue-700">
-              {isPaused ? '⏸️ Paused' : '📤 Uploading...'}
-            </span>
+            <span className="text-sm font-bold text-blue-700">📤 Uploading...</span>
             <span className="text-sm font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded">{uploadProgress}%</span>
           </div>
           <div className="w-full bg-gray-300 rounded-full h-4 overflow-hidden shadow-md">
@@ -287,7 +199,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
               )}
             </div>
           </div>
-          {!isPaused && uploadSpeed > 0 && (
+          {uploadSpeed > 0 && (
             <div className="flex justify-between text-xs text-gray-700 mt-2 font-medium">
               <span>🚀 Speed: {formatSpeed(uploadSpeed)}</span>
               {timeRemaining !== null && timeRemaining > 0 && (
@@ -295,10 +207,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
               )}
             </div>
           )}
-          {isPaused && (
-            <div className="text-xs text-orange-600 mt-2 font-medium">⏸️ Upload paused - click Resume to continue</div>
-          )}
-          {!isPaused && uploadSpeed === 0 && uploadProgress > 0 && (
+          {uploadSpeed === 0 && uploadProgress > 0 && (
             <div className="text-xs text-gray-600 mt-2 font-medium animate-pulse">⏳ Initializing upload...</div>
           )}
         </div>
@@ -313,45 +222,18 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
       <div className="flex gap-2">
         <button
           onClick={handleUpload}
-          disabled={!selectedFile || isUploading || isPaused}
+          disabled={!selectedFile || isUploading}
           className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400 transition-colors"
         >
           {isUploading ? 'Uploading...' : 'Upload File'}
         </button>
-        {isUploading && currentUploadId && (
-          <button
-            onClick={handlePause}
-            className="px-6 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors font-medium shadow-md hover:shadow-lg"
-            title="Pause upload"
-          >
-            ⏸️ Pause
-          </button>
-        )}
-        {isPaused && currentUploadId && (
-          <>
-            <button
-              onClick={handleResume}
-              className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors font-medium shadow-md hover:shadow-lg"
-              title="Resume upload"
-            >
-              ▶️ Resume
-            </button>
-            <button
-              onClick={handleCancel}
-              className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors font-medium shadow-md hover:shadow-lg"
-              title="Cancel upload"
-            >
-              ✕ Cancel
-            </button>
-          </>
-        )}
-        {isUploading && !isPaused && currentUploadId && (
+        {(isUploading || uploadStarted) && currentUploadId && (
           <button
             onClick={handleCancel}
             className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors font-medium shadow-md hover:shadow-lg"
             title="Cancel upload"
           >
-            Cancell
+            Cancel
           </button>
         )}
       </div>
