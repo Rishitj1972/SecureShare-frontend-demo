@@ -197,6 +197,15 @@ export function useChunkedUpload() {
       onUploadIdReady(uploadId)
     }
 
+    // Update status to 'uploading' so UI can show pause button
+    setUploads(prev => ({
+      ...prev,
+      [uploadId]: {
+        ...prev[uploadId],
+        status: 'uploading'
+      }
+    }))
+
     reportProgressFromBytes()
 
     for (let i = 1; i <= totalChunks; i += parallel) {
