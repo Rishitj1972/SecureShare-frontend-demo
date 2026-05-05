@@ -297,6 +297,35 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
           {isPaused && (
             <div className="text-xs text-amber-700 mt-2 font-medium">⏸ Upload paused. You can resume from the same chunk position.</div>
           )}
+          <div className="flex gap-2 mt-3">
+            {isUploading && currentUploadId && !isPaused && (
+              <button
+                onClick={handlePause}
+                className="px-4 py-1.5 bg-amber-500 text-white text-sm rounded hover:bg-amber-600 transition-colors font-medium"
+                title="Pause upload"
+              >
+                ⏸ Pause
+              </button>
+            )}
+            {isPaused && currentUploadId && (
+              <button
+                onClick={handleResume}
+                className="px-4 py-1.5 bg-emerald-500 text-white text-sm rounded hover:bg-emerald-600 transition-colors font-medium"
+                title="Resume upload"
+              >
+                ▶ Resume
+              </button>
+            )}
+            {currentUploadId && (isUploading || isPaused) && (
+              <button
+                onClick={handleCancel}
+                className="px-4 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors font-medium"
+                title="Cancel upload"
+              >
+                ✕ Cancel
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -314,33 +343,6 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
         >
           {isPaused ? 'Paused' : isUploading ? 'Uploading...' : 'Upload File'}
         </button>
-        {isUploading && currentUploadId && !isPaused && (
-          <button
-            onClick={handlePause}
-            className="px-6 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors font-medium shadow-md hover:shadow-lg"
-            title="Pause upload"
-          >
-            Pause
-          </button>
-        )}
-        {isPaused && currentUploadId && (
-          <button
-            onClick={handleResume}
-            className="px-6 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors font-medium shadow-md hover:shadow-lg"
-            title="Resume upload"
-          >
-            Resume
-          </button>
-        )}
-        {(isUploading || uploadStarted || isPaused) && currentUploadId && (
-          <button
-            onClick={handleCancel}
-            className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors font-medium shadow-md hover:shadow-lg"
-            title="Cancel upload"
-          >
-            Cancel
-          </button>
-        )}
       </div>
     </div>
   )
