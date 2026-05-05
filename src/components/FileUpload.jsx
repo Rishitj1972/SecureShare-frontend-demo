@@ -298,7 +298,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
             <div className="text-xs text-amber-700 mt-2 font-medium">⏸ Upload paused. You can resume from the same chunk position.</div>
           )}
           <div className="flex gap-2 mt-3">
-            {isUploading && currentUploadId && !isPaused && (
+            {activeUpload?.status === 'uploading' && !isPaused && (
               <button
                 onClick={handlePause}
                 className="px-4 py-1.5 bg-amber-500 text-white text-sm rounded hover:bg-amber-600 transition-colors font-medium"
@@ -307,7 +307,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
                 ⏸ Pause
               </button>
             )}
-            {isPaused && currentUploadId && (
+            {isPaused && (
               <button
                 onClick={handleResume}
                 className="px-4 py-1.5 bg-emerald-500 text-white text-sm rounded hover:bg-emerald-600 transition-colors font-medium"
@@ -316,7 +316,7 @@ export default function FileUpload({ recipientId, onUploadComplete }) {
                 ▶ Resume
               </button>
             )}
-            {currentUploadId && (isUploading || isPaused) && (
+            {currentUploadId && (
               <button
                 onClick={handleCancel}
                 className="px-4 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors font-medium"
